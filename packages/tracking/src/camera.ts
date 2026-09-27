@@ -21,18 +21,42 @@ export function classifyCameraError(err: unknown): CameraError {
   return new CameraError('unknown', err instanceof Error ? err.message : String(err));
 }
 
-/** Opens the user-facing camera at 640×480 and starts playback into `video`. */
-export async function openCamera(video: HTMLVideoElement): Promise<MediaStream> {
+export type CameraResolution = '640x480' | '1280x720';
+
+export const CAMERA_RESOLUTIONS: Record<CameraResolution, { width: number; height: number }> = {
+  '640x480': { width: 640, height: 480 },
+  '1280x720': { width: 1280, height: 720 },
+};
+
+export interface CameraOptions {
+  /** A device from listCameras(); defaults to the user-facing camera. */
+  deviceId?: string;
+  /** Defaults to 640x480, which is plenty for hand tracking and cheapest to process. */
+  resolution?: CameraResolution;
+}
+
+export function cameraConstraints(opts: CameraOptions = {}): MediaStreamConstraints {
+  const { width, height } = CAMERA_RESOLUTIONS[opts.resolution ?? '640x480'];
+  return {
+    audio: false,
+    video: {
+      ...(opts.deviceId ? { deviceId: { exact: opts.deviceId } } : { facingMode: 'user' }),
+      width: { ideal: width },
+      height: { ideal: height },
+      frameRate: { ideal: 60 },
+    },
+  };
+}
+
+/** Opens a camera and starts playback into `video`. */
+export async function openCamera(video: HTMLVideoElement, opts: CameraOptions = {}): Promise<MediaStream> {
   // mediaDevices is only exposed in secure contexts (https or localhost).
   if (!('mediaDevices' in navigator)) {
     throw new CameraError('unsupported', 'getUserMedia is not available');
   }
   let stream: MediaStream;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 60 } },
-    });
+    stream = await navigator.mediaDevices.getUserMedia(cameraConstraints(opts));
   } catch (err) {
     throw classifyCameraError(err);
   }
@@ -48,4 +72,18 @@ export async function openCamera(video: HTMLVideoElement): Promise<MediaStream> 
 
 export function stopCamera(stream: MediaStream | null): void {
   for (const track of stream?.getTracks() ?? []) track.stop();
+}
+
+export interface CameraDevice {
+  deviceId: string;
+  label: string;
+}
+
+/** Video inputs. Browsers only reveal labels after camera permission is granted. */
+export async function listCameras(): Promise<CameraDevice[]> {
+  if (!('mediaDevices' in navigator)) return [];
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  return devices
+    .filter((d) => d.kind === 'videoinput')
+    .map((d, i) => ({ deviceId: d.deviceId, label: d.label || `Camera ${String(i + 1)}` }));
 }
