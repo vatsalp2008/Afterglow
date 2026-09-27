@@ -1,7 +1,9 @@
 // MediaPipe HandLandmarker in a Web Worker. The main thread only turns each
 // camera frame into an ImageBitmap and transfers it; inference runs off-thread.
-// At most one frame is in flight: frames that arrive while the worker is busy
-// are skipped rather than queued, so latency can't build up.
+// One frame is in flight at a time, plus a one-slot mailbox holding the newest
+// frame that arrived meanwhile: the worker starts on it as soon as it's free
+// (no idle gap waiting for the next camera frame), and a newer frame replaces
+// an older waiting one, so latency can't build up.
 
 import { toHandFrame } from './handFrame';
 import type { CameraTrackerOptions } from './mainThreadTracker';
@@ -20,6 +22,7 @@ export class WorkerHandTracker implements HandTracker {
   private stopWatching: (() => void) | null = null;
   private onFrame: FrameListener | null = null;
   private inFlight: InFlight | null = null;
+  private waiting: VideoFrameInfo | null = null;
   private nextFrameId = 0;
   private lastTimestamp = -1;
   private skipped = 0;
@@ -78,6 +81,7 @@ export class WorkerHandTracker implements HandTracker {
     this.stopWatching?.();
     this.stopWatching = null;
     this.onFrame = null;
+    this.waiting = null;
   }
 
   close(): void {
@@ -88,7 +92,8 @@ export class WorkerHandTracker implements HandTracker {
 
   private submit(info: VideoFrameInfo): void {
     if (this.inFlight) {
-      this.skipped += 1;
+      if (this.waiting) this.skipped += 1;
+      this.waiting = info;
       return;
     }
     const frameId = this.nextFrameId++;
@@ -123,6 +128,10 @@ export class WorkerHandTracker implements HandTracker {
     if (msg.type !== 'result' && msg.type !== 'frameError') return;
     if (inFlight?.frameId !== msg.frameId) return;
     this.inFlight = null;
+    // The video element still shows the waiting frame, so capture it right away.
+    const waiting = this.waiting;
+    this.waiting = null;
+    if (waiting && this.onFrame) this.submit(waiting);
     if (msg.type === 'frameError') {
       this.reportOnce('inference failed', msg.message);
       return;
