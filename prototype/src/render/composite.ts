@@ -42,6 +42,20 @@ export const CompositeShader = {
     uniform vec3 uHighlight;
     varying vec2 vUv;
 
+    // Khronos PBR Neutral without its toe: colors below 0.76 pass through
+    // untouched (the toe would oversaturate the night palette), brighter light
+    // rolls off toward white.
+    vec3 compressHighlights(vec3 color) {
+      const float start = 0.76;
+      const float d = 1.0 - start;
+      float peak = max(color.r, max(color.g, color.b));
+      if (peak < start) return color;
+      float newPeak = 1.0 - d * d / (peak + d - start);
+      color *= newPeak / peak;
+      float g = 1.0 - 1.0 / (0.15 * (peak - newPeak) + 1.0);
+      return mix(color, vec3(newPeak), g);
+    }
+
     float hash(vec2 p) {
       p = fract(p * vec2(123.34, 456.21));
       p += dot(p, p + 45.32);
@@ -65,7 +79,7 @@ export const CompositeShader = {
 
       float n = hash(floor(vUv * uResolution) + fract(uTime * 0.37) * 1000.0) - 0.5;
       base = max(base + n * uGrain * (0.004 + base * 0.3), 0.0);
-      gl_FragColor = vec4(base + texture2D(tLight, vUv).rgb, 1.0);
+      gl_FragColor = vec4(compressHighlights(base + texture2D(tLight, vUv).rgb), 1.0);
     }
   `,
 };

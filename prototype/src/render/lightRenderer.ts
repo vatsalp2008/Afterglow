@@ -1,11 +1,11 @@
 // Three.js renderer. Layer order:
 //   light scene (neon strokes + sparks) -> bloom      [offscreen]
-//   composite(video or night bg + bloomed light) -> ink strokes -> tone map  [screen]
+//   composite(video or night bg + bloomed light, highlight compression) -> ink strokes -> sRGB  [screen]
 // Bloom only ever sees light, so the room behind the user never glows.
 
 import {
   Mesh,
-  NeutralToneMapping,
+  NoToneMapping,
   OrthographicCamera,
   SRGBColorSpace,
   Scene,
@@ -43,12 +43,14 @@ export class LightRenderer {
   private meshes = new Map<string, Mesh>();
   private live: Mesh[] = [];
   private video: VideoTexture | null = null;
+  private grainAnimated = true;
   private frame: FrameSize = { width: 1, height: 1 };
   private viewport: Viewport = { width: 1, height: 1 };
 
   constructor(canvas: HTMLCanvasElement) {
     this.gl = new WebGLRenderer({ canvas, antialias: false, alpha: false, powerPreference: 'high-performance' });
-    this.gl.toneMapping = NeutralToneMapping;
+    // Highlights are compressed in the composite shader instead, so dark UI colors stay exact.
+    this.gl.toneMapping = NoToneMapping;
     this.gl.outputColorSpace = SRGBColorSpace;
     this.gl.setClearColor(0x000000, 1);
     this.lightScene.add(this.sparks.object);
@@ -56,7 +58,7 @@ export class LightRenderer {
     this.bloomComposer = new EffectComposer(this.gl);
     this.bloomComposer.renderToScreen = false;
     this.bloomComposer.addPass(new RenderPass(this.lightScene, this.camera));
-    this.bloomPass = new UnrealBloomPass(new Vector2(256, 256), 1.1, 0.55, 0);
+    this.bloomPass = new UnrealBloomPass(new Vector2(256, 256), 0.95, 0.4, 0);
     this.bloomComposer.addPass(this.bloomPass);
 
     this.finalComposer = new EffectComposer(this.gl);
@@ -106,8 +108,10 @@ export class LightRenderer {
     this.composite.uniforms['uDarkroom']!.value = amount;
   }
 
-  setGrain(amount: number): void {
+  /** Film grain strength; `animated: false` freezes it (reduced motion). */
+  setGrain(amount: number, animated = true): void {
     this.composite.uniforms['uGrain']!.value = amount;
+    this.grainAnimated = animated;
   }
 
   /** Fade time constant in ms; 0 keeps strokes at full brightness. */
@@ -142,7 +146,7 @@ export class LightRenderer {
 
   render(now: number, dtSec: number): void {
     this.fade.uNow.value = now;
-    this.composite.uniforms['uTime']!.value = now / 1000;
+    if (this.grainAnimated) this.composite.uniforms['uTime']!.value = now / 1000;
     this.sparks.update(dtSec);
     this.bloomComposer.render(dtSec);
     this.finalComposer.render(dtSec);
