@@ -8,3 +8,4 @@ export * from './stroke/catmullRom';
 export * from './stroke/strokeBuilder';
 export * from './timeline';
 export * from './types';
+export * from './session';
