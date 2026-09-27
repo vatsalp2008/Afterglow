@@ -115,6 +115,17 @@ export class Studio {
   private disposers: Array<() => void> = [];
 
   constructor(private els: StudioElements) {
+    // A new studio always starts at the intro (this also keeps the UI in sync after a dev hot reload).
+    useStudioStore.setState({
+      phase: 'intro',
+      loadingMessage: null,
+      strokeCount: 0,
+      canUndo: false,
+      canRedo: false,
+      drawing: false,
+      replaying: false,
+      recording: false,
+    });
     this.renderer = new LightRenderer(els.canvas);
     this.overlayCtx = els.overlay.getContext('2d');
     this.renderer.setGrain(1, !this.reducedMotion);
