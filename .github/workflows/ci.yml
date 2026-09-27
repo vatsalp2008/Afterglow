@@ -16,7 +16,7 @@ permissions:
 jobs:
   js:
     name: Lint, typecheck, test, build, e2e
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
@@ -44,14 +44,14 @@ jobs:
 
   ml:
     name: Python (ml)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     defaults:
       run:
         working-directory: ml
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.2.0
         with:
           working-directory: ml
           enable-cache: true
