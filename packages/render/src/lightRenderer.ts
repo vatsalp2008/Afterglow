@@ -154,6 +154,13 @@ export class LightRenderer {
     this.finalComposer.render(dtSec);
   }
 
+  /** The GPU as WebGL reports it, e.g. "ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Pro, ...)". */
+  gpuDescription(): string {
+    const gl = this.gl.getContext();
+    const info = gl.getExtension('WEBGL_debug_renderer_info');
+    return String(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
+  }
+
   /** Renders a frame and snapshots it while the drawing buffer is still valid. */
   snapshot(now: number): Promise<Blob> {
     this.render(now, 0);
