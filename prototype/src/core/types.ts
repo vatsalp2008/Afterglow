@@ -1,0 +1,71 @@
+// Pure data types shared by every layer. Nothing in core/ touches the DOM or
+// reads a clock: all time values are passed in, in milliseconds.
+
+export interface Vec2 {
+  x: number;
+  y: number;
+}
+
+export interface Vec3 {
+  x: number;
+  y: number;
+  z: number;
+}
+
+export type Handedness = 'Left' | 'Right';
+
+/** Stable per-frame key for a hand. Usually the handedness label; disambiguated if two hands share one. */
+export type HandKey = string;
+
+export interface TrackedHand {
+  key: HandKey;
+  handedness: Handedness;
+  score: number;
+  /** 21 landmarks in landmark space (normalized, unmirrored camera image). */
+  landmarks: Vec3[];
+}
+
+export interface HandFrame {
+  frameId: number;
+  /** Capture time in ms (performance timebase). */
+  captureTime: number;
+  hands: TrackedHand[];
+}
+
+export type PenState = 'idle' | 'hover' | 'drawing';
+
+export type BrushId = 'neon' | 'sparks' | 'ink';
+
+/** A point on the input path, in view space (mirrored, normalized [0,1]). */
+export interface PenSample {
+  x: number;
+  y: number;
+  /** Depth factor: 1 is the calibrated neutral distance, larger is closer to the camera. */
+  depth: number;
+}
+
+export type InputEvent =
+  | { type: 'strokeStart'; t: number; handKey: HandKey; p: PenSample }
+  | { type: 'strokeMove'; t: number; handKey: HandKey; p: PenSample }
+  | { type: 'strokeEnd'; t: number; handKey: HandKey; reason: 'release' | 'handLost' }
+  | { type: 'hover'; t: number; handKey: HandKey; p: PenSample };
+
+/** A stroke point in canvas space. */
+export interface StrokePoint {
+  x: number;
+  y: number;
+  depth: number;
+  /** Session time in ms. */
+  t: number;
+}
+
+export interface Stroke {
+  id: string;
+  brush: BrushId;
+  /** Hex color, e.g. #FFB547. */
+  color: string;
+  /** Base width in canvas units. */
+  size: number;
+  points: StrokePoint[];
+  createdAt: number;
+}
