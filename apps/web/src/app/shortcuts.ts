@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
-import type { BrushId } from '../core/types';
+import type { BrushId } from '@afterglow/core';
+import { BRUSH_COLORS } from '@afterglow/ui/tokens';
 import type { Studio } from '../studio/studio';
 import { useStudioStore } from './store';
-import { BRUSH_COLORS, type SizeId } from './tokens';
+import type { SizeId } from './brushes';
 
 const BRUSH_ORDER: BrushId[] = ['neon', 'sparks', 'ink'];
 const SIZE_ORDER: SizeId[] = ['s', 'm', 'l'];

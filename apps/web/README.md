@@ -1,11 +1,12 @@
-# Afterglow prototype
+# @afterglow/web
 
-A working prototype of Afterglow, a light-painting studio you control with your hands. It exists to decide whether the look and the interaction are right before the full build (see [`../PLAN.md`](../PLAN.md)).
+The Afterglow studio: a light-painting app you control with your hands.
 
 ## Run it
 
+From the repository root:
+
 ```sh
-cd prototype
 pnpm install
 pnpm dev
 ```
@@ -51,17 +52,10 @@ camera ─ requestVideoFrameCallback ─▶ MediaPipe HandLandmarker (GPU, main 
       ─▶ Three.js: neon ribbons + sparks ─▶ bloom ─▶ composite over darkroom video
 ```
 
-- `src/core/` is pure TypeScript with no DOM access and no clock reads. It holds coordinate spaces, filters, the gesture state machine, stroke building, history, and the timelapse timeline. `pnpm test` covers it.
-- `src/render/` renders the light strokes. Bloom applies only to the light layer, so the video and the matte ink brush never glow.
-- `src/studio/` runs the real-time loop outside React. React only renders the controls.
-
-## Checks
-
-```sh
-pnpm test        # core unit tests
-pnpm typecheck
-pnpm build
-```
+- [`packages/core`](../../packages/core) is pure TypeScript with no DOM access and no clock reads. It holds coordinate spaces, filters, the gesture state machine, stroke building, history, and the timelapse timeline.
+- [`packages/tracking`](../../packages/tracking) wraps the camera and MediaPipe. The MediaPipe adapter is lazy-loaded, so mouse-only visitors never download it.
+- [`packages/render`](../../packages/render) renders the light strokes. Bloom applies only to the light layer, so the video and the matte ink brush never glow.
+- [`src/studio`](src/studio) runs the real-time loop outside React. React only renders the controls, built from [`packages/ui`](../../packages/ui).
 
 ## Known limits
 

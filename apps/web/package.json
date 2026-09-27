@@ -1,0 +1,32 @@
+{
+  "name": "@afterglow/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/copy-mediapipe-wasm.mjs && vite",
+    "build": "node scripts/copy-mediapipe-wasm.mjs && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@afterglow/core": "workspace:*",
+    "@afterglow/render": "workspace:*",
+    "@afterglow/tracking": "workspace:*",
+    "@afterglow/ui": "workspace:*",
+    "@mediapipe/tasks-vision": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "zustand": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}

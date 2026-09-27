@@ -1,3 +1,4 @@
+import { Button } from '@afterglow/ui';
 import type { Studio } from '../studio/studio';
 import styles from './Intro.module.css';
 import { useStudioStore, type StartError } from './store';
@@ -40,12 +41,12 @@ export function Intro({ studio }: { studio: Studio }) {
         )}
 
         <div className={styles.actions}>
-          <button className={styles.primary} onClick={() => void studio.startCamera()} disabled={starting}>
+          <Button onClick={() => void studio.startCamera()} disabled={starting}>
             {error ? 'Try again' : 'Start painting'}
-          </button>
-          <button className={styles.secondary} onClick={() => studio.startPointer()} disabled={starting}>
+          </Button>
+          <Button variant="secondary" onClick={() => studio.startPointer()} disabled={starting}>
             Paint with a mouse instead
-          </button>
+          </Button>
         </div>
 
         <p className={styles.privacy}>

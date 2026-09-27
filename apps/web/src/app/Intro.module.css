@@ -54,45 +54,6 @@
   margin-top: 32px;
 }
 
-.primary,
-.secondary {
-  height: 44px;
-  padding: 0 20px;
-  border-radius: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition:
-    background 150ms ease-out,
-    border-color 150ms ease-out,
-    opacity 150ms ease-out;
-}
-
-.primary {
-  border: 0;
-  background: var(--paper);
-  color: var(--night);
-}
-
-.primary:hover:not(:disabled) {
-  background: #ffffff;
-}
-
-.secondary {
-  border: 1px solid var(--line);
-  background: transparent;
-  color: var(--paper);
-}
-
-.secondary:hover:not(:disabled) {
-  border-color: rgba(138, 147, 184, 0.5);
-}
-
-.primary:disabled,
-.secondary:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
 .status {
   margin: 24px 0 0;
   color: var(--tungsten);

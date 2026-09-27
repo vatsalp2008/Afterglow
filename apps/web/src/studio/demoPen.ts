@@ -2,8 +2,8 @@
 // parametric loops. Its strokes go straight to the renderer and are never part
 // of the user's session.
 
-import type { BrushId, InputEvent, PenSample } from '../core/types';
-import { PALETTE } from '../app/tokens';
+import type { BrushId, InputEvent, PenSample } from '@afterglow/core';
+import { PALETTE } from '@afterglow/ui/tokens';
 
 interface Figure {
   path: (u: number) => { x: number; y: number };

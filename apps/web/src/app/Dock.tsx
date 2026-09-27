@@ -1,15 +1,14 @@
-import type { CSSProperties, ReactNode } from 'react';
-import { useShallow } from 'zustand/react/shallow';
-import type { BrushId } from '../core/types';
-import type { Studio } from '../studio/studio';
-import styles from './Dock.module.css';
+import type { BrushId } from '@afterglow/core';
 import {
+  BRUSH_COLORS,
   ClearIcon,
   FadeIcon,
   FixIcon,
+  IconButton,
   InkIcon,
   MoonIcon,
   NeonIcon,
+  Panel,
   PlayIcon,
   RecordIcon,
   RedoIcon,
@@ -18,9 +17,13 @@ import {
   StillIcon,
   StopIcon,
   UndoIcon,
-} from './icons';
+} from '@afterglow/ui';
+import type { CSSProperties, ReactNode } from 'react';
+import { useShallow } from 'zustand/react/shallow';
+import type { Studio } from '../studio/studio';
+import { SIZES, type SizeId } from './brushes';
+import styles from './Dock.module.css';
 import { useStudioStore } from './store';
-import { BRUSH_COLORS, SIZES, type SizeId } from './tokens';
 
 const BRUSHES: Array<{ id: BrushId; label: string; icon: ReactNode }> = [
   { id: 'neon', label: 'Neon', icon: <NeonIcon /> },
@@ -29,30 +32,6 @@ const BRUSHES: Array<{ id: BrushId; label: string; icon: ReactNode }> = [
 ];
 
 const SIZE_LABELS: Record<SizeId, string> = { s: 'Thin', m: 'Medium', l: 'Thick' };
-
-interface ToolProps {
-  tip: string;
-  onClick: () => void;
-  pressed?: boolean;
-  disabled?: boolean;
-  children: ReactNode;
-}
-
-function Tool({ tip, onClick, pressed, disabled, children }: ToolProps) {
-  return (
-    <button
-      type="button"
-      className={styles.tool}
-      data-tip={tip}
-      aria-label={tip}
-      aria-pressed={pressed}
-      disabled={disabled}
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  );
-}
 
 const Divider = () => <span className={styles.divider} aria-hidden="true" />;
 
@@ -77,12 +56,12 @@ export function Dock({ studio }: { studio: Studio }) {
   const set = useStudioStore.setState;
 
   return (
-    <nav className={`${styles.dock} ${s.drawing ? styles.receded : ''}`} aria-label="Tools">
+    <Panel as="nav" className={`${styles.dock} ${s.drawing ? styles.receded : ''}`} aria-label="Tools">
       <div className={styles.group} role="group" aria-label="Brush">
         {BRUSHES.map((b) => (
-          <Tool key={b.id} tip={`${b.label} (B)`} pressed={s.brush === b.id} onClick={() => set({ brush: b.id })}>
+          <IconButton key={b.id} label={`${b.label} (B)`} pressed={s.brush === b.id} onClick={() => set({ brush: b.id })}>
             {b.icon}
-          </Tool>
+          </IconButton>
         ))}
       </div>
       <Divider />
@@ -93,7 +72,7 @@ export function Dock({ studio }: { studio: Studio }) {
             type="button"
             className={styles.swatch}
             style={{ '--swatch': c.hex } as CSSProperties}
-            data-tip={`${c.name} (${i + 1})`}
+            data-tip={`${c.name} (${String(i + 1)})`}
             aria-label={c.name}
             aria-pressed={s.color === c.hex}
             onClick={() => set({ color: c.hex })}
@@ -103,52 +82,65 @@ export function Dock({ studio }: { studio: Studio }) {
       <Divider />
       <div className={styles.group} role="group" aria-label="Size">
         {(Object.keys(SIZES) as SizeId[]).map((id) => (
-          <Tool key={id} tip={`${SIZE_LABELS[id]} ([ and ])`} pressed={s.size === id} onClick={() => set({ size: id })}>
+          <IconButton
+            key={id}
+            label={`${SIZE_LABELS[id]} ([ and ])`}
+            pressed={s.size === id}
+            onClick={() => set({ size: id })}
+          >
             <span className={styles.dot} style={{ width: 4 + SIZES[id] * 0.5, height: 4 + SIZES[id] * 0.5 }} />
-          </Tool>
+          </IconButton>
         ))}
       </div>
       <Divider />
       <div className={styles.group}>
-        <Tool
-          tip={s.fade ? 'Strokes fade like a long exposure. Click to fix them (F)' : 'Strokes are fixed. Click to let them fade (F)'}
+        <IconButton
+          label={
+            s.fade
+              ? 'Strokes fade like a long exposure. Click to fix them (F)'
+              : 'Strokes are fixed. Click to let them fade (F)'
+          }
           onClick={() => set({ fade: !s.fade })}
         >
           {s.fade ? <FadeIcon /> : <FixIcon />}
-        </Tool>
+        </IconButton>
         {s.inputMode === 'camera' && (
-          <Tool tip="Darkroom (D)" pressed={s.darkroom} onClick={() => set({ darkroom: !s.darkroom })}>
+          <IconButton label="Darkroom (D)" pressed={s.darkroom} onClick={() => set({ darkroom: !s.darkroom })}>
             <MoonIcon />
-          </Tool>
+          </IconButton>
         )}
       </div>
       <Divider />
       <div className={styles.group}>
-        <Tool tip="Undo (Z)" disabled={!s.canUndo || s.replaying} onClick={() => studio.undo()}>
+        <IconButton label="Undo (Z)" disabled={!s.canUndo || s.replaying} onClick={() => studio.undo()}>
           <UndoIcon />
-        </Tool>
-        <Tool tip="Redo (Shift Z)" disabled={!s.canRedo || s.replaying} onClick={() => studio.redo()}>
+        </IconButton>
+        <IconButton label="Redo (Shift Z)" disabled={!s.canRedo || s.replaying} onClick={() => studio.redo()}>
           <RedoIcon />
-        </Tool>
-        <Tool tip="Clear, press twice (Delete)" disabled={s.strokeCount === 0 || s.replaying} onClick={() => studio.requestClear()}>
+        </IconButton>
+        <IconButton
+          label="Clear, press twice (Delete)"
+          disabled={s.strokeCount === 0 || s.replaying}
+          onClick={() => studio.requestClear()}
+        >
           <ClearIcon />
-        </Tool>
+        </IconButton>
       </div>
       <Divider />
       <div className={styles.group}>
-        <Tool
-          tip={s.replaying ? 'Stop replay (Esc)' : 'Replay as timelapse (T)'}
+        <IconButton
+          label={s.replaying ? 'Stop replay (Esc)' : 'Replay as timelapse (T)'}
           pressed={s.replaying && !s.recording}
           disabled={s.strokeCount === 0 && !s.replaying}
           onClick={() => (s.replaying ? studio.stopReplay() : studio.startReplay())}
         >
           {s.replaying && !s.recording ? <StopIcon /> : <PlayIcon />}
-        </Tool>
-        <Tool tip="Save long exposure PNG (S)" disabled={s.strokeCount === 0} onClick={() => void studio.saveStill()}>
+        </IconButton>
+        <IconButton label="Save long exposure PNG (S)" disabled={s.strokeCount === 0} onClick={() => void studio.saveStill()}>
           <StillIcon />
-        </Tool>
-        <Tool
-          tip={s.recording ? 'Stop recording (Esc)' : 'Record timelapse video (V)'}
+        </IconButton>
+        <IconButton
+          label={s.recording ? 'Stop recording (Esc)' : 'Record timelapse video (V)'}
           pressed={s.recording}
           disabled={s.strokeCount === 0 && !s.replaying}
           onClick={() => (s.replaying ? studio.stopReplay() : studio.startReplay(true))}
@@ -156,12 +148,12 @@ export function Dock({ studio }: { studio: Studio }) {
           <span className={s.recording ? styles.recording : undefined}>
             <RecordIcon />
           </span>
-        </Tool>
+        </IconButton>
       </div>
       <Divider />
-      <Tool tip="Stats (H)" pressed={s.hudOpen} onClick={() => set({ hudOpen: !s.hudOpen })}>
+      <IconButton label="Stats (H)" pressed={s.hudOpen} onClick={() => set({ hudOpen: !s.hudOpen })}>
         <StatsIcon />
-      </Tool>
-    </nav>
+      </IconButton>
+    </Panel>
   );
 }

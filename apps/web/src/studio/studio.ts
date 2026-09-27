@@ -3,30 +3,38 @@
 // Pointer input and the intro demo pen feed the same StrokeBuilder path.
 // Cursors and the skeleton overlay are written to the DOM directly each frame.
 
-import { showToast, useStudioStore, type StudioState } from '../app/store';
-import { SIZES } from '../app/tokens';
 import {
+  buildTimeline,
   canvasToScreen,
   canvasToView,
   coverFit,
   frameForAspect,
+  HAND_CONNECTIONS,
+  History,
+  LandmarkFilter,
   landmarkToView,
+  penSample,
+  PinchTracker,
+  sampleTimeline,
   screenToCanvas,
+  StrokeBuilder,
   viewToCanvas,
+  type BuildResult,
   type CoverFit,
   type FrameSize,
+  type HandFrame,
+  type InputEvent,
+  type PenSample,
+  type PenState,
+  type Stroke,
+  type StrokeStyle,
+  type Timeline,
   type Viewport,
-} from '../core/coords';
-import { LandmarkFilter } from '../core/filters/landmarkFilter';
-import { PinchTracker, penSample } from '../core/gesture/pinch';
-import { HAND_CONNECTIONS } from '../core/hand';
-import { History } from '../core/history';
-import { StrokeBuilder, type BuildResult, type StrokeStyle } from '../core/stroke/strokeBuilder';
-import { buildTimeline, sampleTimeline, type Timeline } from '../core/timeline';
-import type { HandFrame, InputEvent, PenSample, PenState, Stroke } from '../core/types';
-import { LightRenderer } from '../render/lightRenderer';
-import { CameraError, openCamera, stopCamera } from '../tracking/camera';
-import type { MediaPipeHandTracker, TrackerTiming } from '../tracking/handTracker';
+} from '@afterglow/core';
+import { LightRenderer } from '@afterglow/render';
+import { CameraError, openCamera, stopCamera, type MediaPipeHandTracker, type TrackerTiming } from '@afterglow/tracking';
+import { SIZES } from '../app/brushes';
+import { showToast, useStudioStore, type StudioState } from '../app/store';
 import { DemoPen } from './demoPen';
 import { STRESS_STROKES, stressStrokes } from './stress';
 import { RateCounter, RollingStats } from './telemetry';
@@ -171,8 +179,8 @@ export class Studio {
     set({ loadingMessage: 'Loading hand tracking (about 8 MB)' });
     try {
       // Loaded on demand so pointer-only visitors never download MediaPipe.
-      const { MediaPipeHandTracker } = await import('../tracking/handTracker');
-      this.tracker ??= await MediaPipeHandTracker.create();
+      const { MediaPipeHandTracker } = await import('@afterglow/tracking/mediapipe');
+      this.tracker ??= await MediaPipeHandTracker.create(`${import.meta.env.BASE_URL}mediapipe`);
     } catch (err) {
       console.error('[studio] hand tracker failed to load', err);
       set({ phase: 'intro', loadingMessage: null, error: 'model' });

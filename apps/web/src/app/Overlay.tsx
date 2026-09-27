@@ -1,3 +1,4 @@
+import { Panel } from '@afterglow/ui';
 import { useEffect, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import styles from './Overlay.module.css';
@@ -40,8 +41,8 @@ export function Toast() {
 
   if (!toast) return null;
   return (
-    <div className={`${styles.toast} ${visible ? styles.visible : ''}`} role="status" aria-live="polite">
+    <Panel className={`${styles.toast} ${visible ? styles.visible : ''}`} role="status" aria-live="polite">
       {toast.text}
-    </div>
+    </Panel>
   );
 }

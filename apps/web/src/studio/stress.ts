@@ -1,9 +1,8 @@
 // `?stress=1`: synthetic strokes for render performance testing. Clearly
 // labelled in the UI; never mixed into a real session silently.
 
-import type { FrameSize } from '../core/coords';
-import type { Stroke, StrokePoint } from '../core/types';
-import { BRUSH_COLORS } from '../app/tokens';
+import type { FrameSize, Stroke, StrokePoint } from '@afterglow/core';
+import { BRUSH_COLORS } from '@afterglow/ui/tokens';
 
 export const STRESS_STROKES = 500;
 

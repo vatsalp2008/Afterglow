@@ -1,7 +1,7 @@
+import { CloseIcon, Panel } from '@afterglow/ui';
 import { useShallow } from 'zustand/react/shallow';
 import type { HandStat } from './store';
 import styles from './Hud.module.css';
-import { CloseIcon } from './icons';
 import { useStudioStore } from './store';
 
 const ms = (v: number | null) => (v === null ? 'n/a' : `${Math.round(v)} ms`);
@@ -80,7 +80,7 @@ export function Hud() {
   const from = stats.hasCaptureTime ? 'Capture' : 'Frame callback';
 
   return (
-    <aside className={styles.hud} aria-label="Stats">
+    <Panel as="aside" className={styles.hud} aria-label="Stats">
       <header className={styles.header}>
         <h2>Stats</h2>
         <button type="button" className={styles.close} aria-label="Close stats" onClick={() => set({ hudOpen: false })}>
@@ -156,6 +156,6 @@ export function Hud() {
         Values are p50 / p95 over the last 120 frames. Inference runs on the main thread. Render time is measured when
         the frame is submitted to the GPU, not when it reaches the display.
       </p>
-    </aside>
+    </Panel>
   );
 }

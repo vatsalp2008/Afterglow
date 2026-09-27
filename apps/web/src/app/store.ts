@@ -2,11 +2,17 @@
 // pushes per-frame data through React; stats are published at 4 Hz.
 
 import { create } from 'zustand';
-import { DEFAULT_ONE_EURO, type OneEuroParams } from '../core/filters/oneEuro';
-import { DEFAULT_PINCH, type PinchConfig } from '../core/gesture/pinch';
-import type { BrushId, PenState } from '../core/types';
-import type { CameraErrorKind } from '../tracking/camera';
-import { PALETTE, type SizeId } from './tokens';
+import {
+  DEFAULT_ONE_EURO,
+  DEFAULT_PINCH,
+  type BrushId,
+  type OneEuroParams,
+  type PenState,
+  type PinchConfig,
+} from '@afterglow/core';
+import type { CameraErrorKind } from '@afterglow/tracking';
+import { PALETTE } from '@afterglow/ui/tokens';
+import type { SizeId } from './brushes';
 
 export type Phase = 'intro' | 'starting' | 'studio';
 export type InputMode = 'camera' | 'pointer';
