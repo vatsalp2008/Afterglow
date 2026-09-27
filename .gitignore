@@ -1,6 +1,20 @@
 node_modules
 dist
-.DS_Store
-*.log
+coverage
+.turbo
 .vite
+playwright-report
+test-results
+*.log
+.DS_Store
+
+# Served copies of the MediaPipe WASM runtime (copied from node_modules)
+apps/web/public/mediapipe
 prototype/public/mediapipe
+
+# Python
+.venv
+__pycache__
+.mypy_cache
+.pytest_cache
+.ruff_cache
