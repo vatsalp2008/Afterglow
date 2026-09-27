@@ -21,29 +21,41 @@
   background: var(--gel-magenta);
 }
 
-.toast {
+.toastRegion {
   position: fixed;
   top: 56px;
   left: 50%;
-  transform: translate(-50%, -6px);
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 12;
+}
+
+.toast {
   padding: 9px 14px;
   border-radius: 12px;
   font-size: 14px;
-  opacity: 0;
-  pointer-events: none;
-  z-index: 12;
+  white-space: nowrap;
+  animation: toast-in 200ms ease-out;
   transition:
     opacity 200ms ease-out,
     transform 200ms ease-out;
 }
 
-.visible {
-  opacity: 1;
-  transform: translate(-50%, 0);
+.hidden {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .toast {
+    animation: none;
     transition: none;
   }
 }

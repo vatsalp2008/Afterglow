@@ -30,19 +30,23 @@ export function Hint() {
 
 export function Toast() {
   const toast = useStudioStore((s) => s.toast);
-  const [visible, setVisible] = useState(false);
+  // A toast is visible until its own timer marks it hidden; a newer toast restarts the cycle.
+  const [hiddenId, setHiddenId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!toast) return;
-    setVisible(true);
-    const t = setTimeout(() => setVisible(false), 2600);
+    const t = setTimeout(() => setHiddenId(toast.id), 2600);
     return () => clearTimeout(t);
   }, [toast]);
 
-  if (!toast) return null;
+  // The live region stays mounted so screen readers reliably announce each new message.
   return (
-    <Panel className={`${styles.toast} ${visible ? styles.visible : ''}`} role="status" aria-live="polite">
-      {toast.text}
-    </Panel>
+    <div className={styles.toastRegion} role="status" aria-live="polite">
+      {toast && (
+        <Panel key={toast.id} className={`${styles.toast} ${toast.id === hiddenId ? styles.hidden : ''}`}>
+          {toast.text}
+        </Panel>
+      )}
+    </div>
   );
 }
