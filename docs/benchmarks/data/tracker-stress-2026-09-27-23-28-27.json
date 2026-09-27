@@ -1,0 +1,76 @@
+{
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Pro, Unspecified Version)",
+    "video": "640x480",
+    "viewport": "1440x900@1",
+    "strokes": 500,
+    "recordedAt": "2026-09-27T23:28:27.717Z"
+  },
+  "blocks": [
+    {
+      "mode": "main",
+      "delegate": "GPU",
+      "durationMs": 10014.200000047684,
+      "frames": 300,
+      "trackingFps": 29.957460406080518,
+      "latencyP50": 26.499999952316102,
+      "latencyP95": 31.099999952315557,
+      "inferenceP50": 14,
+      "mainThreadP50": 14,
+      "mainThreadP95": 17,
+      "renderFrameP95": 16.799999999999272,
+      "slowFrameShare": 0,
+      "droppedFrames": 0,
+      "skippedFrames": 0
+    },
+    {
+      "mode": "worker",
+      "delegate": "GPU",
+      "durationMs": 10005.5,
+      "frames": 300,
+      "trackingFps": 29.983509070011493,
+      "latencyP50": 36.10000009536816,
+      "latencyP95": 41.40000004768444,
+      "inferenceP50": 23.5,
+      "mainThreadP50": 0.20000004768371582,
+      "mainThreadP95": 0.40000009536743164,
+      "renderFrameP95": 16.700000000000728,
+      "slowFrameShare": 0,
+      "droppedFrames": 0,
+      "skippedFrames": 0
+    },
+    {
+      "mode": "main",
+      "delegate": "GPU",
+      "durationMs": 10045.200000047684,
+      "frames": 301,
+      "trackingFps": 29.964560187808225,
+      "latencyP50": 28.400000000001455,
+      "latencyP95": 46.599999999998545,
+      "inferenceP50": 15.700000047683716,
+      "mainThreadP50": 15.700000047683716,
+      "mainThreadP95": 31.5,
+      "renderFrameP95": 33.30000000000291,
+      "slowFrameShare": 0.1342155009451796,
+      "droppedFrames": 0,
+      "skippedFrames": 0
+    },
+    {
+      "mode": "worker",
+      "delegate": "GPU",
+      "durationMs": 10000.5,
+      "frames": 300,
+      "trackingFps": 29.99850007499625,
+      "latencyP50": 34.599999999998545,
+      "latencyP95": 41.900000047680805,
+      "inferenceP50": 22.90000009536743,
+      "mainThreadP50": 0.20000004768371582,
+      "mainThreadP95": 0.40000009536743164,
+      "renderFrameP95": 16.799999999995634,
+      "slowFrameShare": 0,
+      "droppedFrames": 0,
+      "skippedFrames": 0
+    }
+  ]
+}
