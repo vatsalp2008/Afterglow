@@ -2,12 +2,12 @@
 // requestVideoFrameCallback so each camera frame is processed exactly once.
 // (Moving this into a worker is a Phase 1 decision; see PLAN.md.)
 
-import { FilesetResolver, HandLandmarker, type HandLandmarkerResult } from '@mediapipe/tasks-vision';
-import type { HandFrame, Handedness, TrackedHand } from '../core/types';
+import type { HandFrame } from '@afterglow/core';
+import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
+import { toHandFrame } from './handFrame';
 
 const MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
-const WASM_BASE = `${import.meta.env.BASE_URL}mediapipe`;
 
 export interface TrackerTiming {
   /** Capture time of the frame (performance timebase), or the callback time if the browser doesn't expose it. */
@@ -32,8 +32,9 @@ export class MediaPipeHandTracker {
     readonly delegate: 'GPU' | 'CPU',
   ) {}
 
-  static async create(): Promise<MediaPipeHandTracker> {
-    const fileset = await FilesetResolver.forVisionTasks(WASM_BASE);
+  /** @param wasmBasePath URL of the directory serving the MediaPipe WASM runtime. */
+  static async create(wasmBasePath: string): Promise<MediaPipeHandTracker> {
+    const fileset = await FilesetResolver.forVisionTasks(wasmBasePath);
     const options = {
       runningMode: 'VIDEO' as const,
       numHands: 2,
@@ -75,7 +76,7 @@ export class MediaPipeHandTracker {
         try {
           const result = this.landmarker.detectForVideo(video, timestamp);
           const doneAt = performance.now();
-          onFrame(this.toFrame(result, captureTime), { captureTime, hasCaptureTime, inferenceMs: doneAt - t0, doneAt });
+          onFrame(toHandFrame(result, this.frameId++, captureTime), { captureTime, hasCaptureTime, inferenceMs: doneAt - t0, doneAt });
         } catch (err) {
           // Keep the loop alive (e.g. across a transient GPU context loss), but don't flood the console.
           if (!this.reportedError) console.error('[tracker] inference failed', err);
@@ -109,23 +110,5 @@ export class MediaPipeHandTracker {
 
   close(): void {
     this.landmarker.close();
-  }
-
-  private toFrame(result: HandLandmarkerResult, captureTime: number): HandFrame {
-    const used = new Set<string>();
-    const hands: TrackedHand[] = result.landmarks.map((landmarks, i) => {
-      const category = result.handedness[i]?.[0];
-      // MediaPipe labels assume a mirrored selfie image; we pass the unmirrored frame.
-      const handedness: Handedness = category?.categoryName === 'Left' ? 'Right' : 'Left';
-      const key = used.has(handedness) ? `${handedness}#${i}` : handedness;
-      used.add(key);
-      return {
-        key,
-        handedness,
-        score: category?.score ?? 0,
-        landmarks: landmarks.map((p) => ({ x: p.x, y: p.y, z: p.z })),
-      };
-    });
-    return { frameId: this.frameId++, captureTime, hands };
   }
 }

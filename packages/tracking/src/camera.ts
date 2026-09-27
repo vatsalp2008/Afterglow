@@ -10,7 +10,8 @@ export class CameraError extends Error {
   }
 }
 
-function classify(err: unknown): CameraError {
+/** Maps a getUserMedia failure to a kind the UI can explain. */
+export function classifyCameraError(err: unknown): CameraError {
   const name = err instanceof DOMException ? err.name : '';
   if (name === 'NotAllowedError' || name === 'SecurityError') return new CameraError('denied', 'Camera permission denied');
   if (name === 'NotFoundError' || name === 'OverconstrainedError') return new CameraError('notFound', 'No camera found');
@@ -30,7 +31,7 @@ export async function openCamera(video: HTMLVideoElement): Promise<MediaStream> 
       video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 60 } },
     });
   } catch (err) {
-    throw classify(err);
+    throw classifyCameraError(err);
   }
   video.srcObject = stream;
   video.muted = true;
