@@ -1,5 +1,7 @@
+import { CAMERA_RESOLUTIONS, type CameraResolution } from '@afterglow/tracking';
 import { CloseIcon, Panel } from '@afterglow/ui';
 import { useShallow } from 'zustand/react/shallow';
+import type { Studio } from '../studio/studio';
 import type { HandStat } from './store';
 import styles from './Hud.module.css';
 import { useStudioStore } from './store';
@@ -67,7 +69,9 @@ function Slider({ label, value, min, max, step, onChange }: SliderProps) {
   );
 }
 
-export function Hud() {
+const TRACKER_LABELS = { worker: 'worker', main: 'main thread', fixture: 'recorded session' } as const;
+
+export function Hud({ studio }: { studio: Studio }) {
   const s = useStudioStore(
     useShallow((st) => ({
       open: st.hudOpen,
@@ -78,13 +82,20 @@ export function Hud() {
       oneEuro: st.oneEuro,
       showSkeleton: st.showSkeleton,
       showRaw: st.showRaw,
+      debugView: st.debugView,
+      cameras: st.cameras,
+      cameraId: st.cameraId,
+      resolution: st.resolution,
     })),
   );
   if (!s.open) return null;
   const set = useStudioStore.setState;
   const camera = s.inputMode === 'camera';
+  const tracking = s.inputMode !== 'pointer';
   const { stats } = s;
   const from = stats.hasCaptureTime ? 'Capture' : 'Frame callback';
+  const tracker = stats.tracker ? TRACKER_LABELS[stats.tracker] : 'n/a';
+  const delegate = stats.delegate && stats.delegate !== 'none' ? `, ${stats.delegate}` : '';
 
   return (
     <Panel as="aside" className={styles.hud} aria-label="Stats">
@@ -97,13 +108,63 @@ export function Hud() {
 
       <dl className={styles.rows}>
         <Row label="Render" value={`${stats.renderFps} fps`} />
-        {camera && <Row label="Tracking" value={`${stats.trackingFps} fps, ${stats.delegate ?? 'n/a'}`} />}
-        {camera && <Row label={`${from} to landmarks`} value={`${ms(stats.landmarkP50)} / ${ms(stats.landmarkP95)}`} />}
-        {camera && <Row label={`${from} to render`} value={`${ms(stats.inkP50)} / ${ms(stats.inkP95)}`} />}
+        {tracking && <Row label="Tracking" value={`${stats.trackingFps} fps, ${tracker}${delegate}`} />}
+        {camera && (
+          <Row label="Main thread per frame" value={`${ms(stats.mainThreadP50)} / ${ms(stats.mainThreadP95)}`} />
+        )}
+        {tracking && (
+          <Row label={`${from} to landmarks`} value={`${ms(stats.landmarkP50)} / ${ms(stats.landmarkP95)}`} />
+        )}
+        {tracking && <Row label={`${from} to render`} value={`${ms(stats.inkP50)} / ${ms(stats.inkP95)}`} />}
+        {camera && (
+          <Row
+            label="Dropped frames"
+            value={`camera ${String(stats.droppedFrames)}, tracker ${String(stats.skippedFrames)}`}
+          />
+        )}
         <Row label="Strokes" value={String(s.strokeCount)} />
       </dl>
 
       {camera && (
+        <section className={styles.section}>
+          <h3>Camera</h3>
+          <label className={styles.field}>
+            <span>Device</span>
+            <select
+              value={s.cameraId ?? ''}
+              onChange={(e) => {
+                set({ cameraId: e.target.value });
+                void studio.switchCamera({ deviceId: e.target.value, resolution: s.resolution });
+              }}
+            >
+              {s.cameras.map((c) => (
+                <option key={c.deviceId} value={c.deviceId}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className={styles.field}>
+            <span>Resolution</span>
+            <select
+              value={s.resolution}
+              onChange={(e) => {
+                const resolution = e.target.value as CameraResolution;
+                set({ resolution });
+                void studio.switchCamera({ resolution, ...(s.cameraId ? { deviceId: s.cameraId } : {}) });
+              }}
+            >
+              {(Object.keys(CAMERA_RESOLUTIONS) as CameraResolution[]).map((r) => (
+                <option key={r} value={r}>
+                  {r.replace('x', ' × ')}
+                </option>
+              ))}
+            </select>
+          </label>
+        </section>
+      )}
+
+      {tracking && (
         <>
           <section className={styles.section}>
             <h3>Pen</h3>
@@ -148,6 +209,10 @@ export function Hud() {
               onChange={(v) => set({ oneEuro: { ...s.oneEuro, beta: v } })}
             />
             <label className={styles.check}>
+              <input type="checkbox" checked={s.debugView} onChange={(e) => set({ debugView: e.target.checked })} />
+              Debug view: natural video, skeleton, and raw signal
+            </label>
+            <label className={styles.check}>
               <input type="checkbox" checked={s.showRaw} onChange={(e) => set({ showRaw: e.target.checked })} />
               Show raw signal next to the filtered pen
             </label>
@@ -164,8 +229,9 @@ export function Hud() {
       )}
 
       <p className={styles.note}>
-        Values are p50 / p95 over the last 120 frames. Inference runs on the main thread. Render time is measured when
-        the frame is submitted to the GPU, not when it reaches the display.
+        Values are p50 / p95 over the last 120 frames. {stats.tracker === 'worker' && 'Inference runs in a worker. '}
+        {stats.tracker === 'main' && 'Inference runs on the main thread. '}
+        Render time is measured when the frame is submitted to the GPU, not when it reaches the display.
       </p>
     </Panel>
   );
