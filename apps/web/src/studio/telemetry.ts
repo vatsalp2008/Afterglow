@@ -1,3 +1,10 @@
+/** The p-th percentile (nearest rank) of `values`, or null when empty. */
+export function percentile(values: readonly number[], p: number): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length))]!;
+}
+
 /** Fixed-size window of samples with percentile readout. */
 export class RollingStats {
   private buf: number[] = [];
@@ -10,9 +17,7 @@ export class RollingStats {
   }
 
   percentile(p: number): number | null {
-    if (this.buf.length === 0) return null;
-    const sorted = [...this.buf].sort((a, b) => a - b);
-    return sorted[Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length))]!;
+    return percentile(this.buf, p);
   }
 
   clear(): void {
@@ -26,11 +31,15 @@ export class RateCounter {
 
   tick(now: number): void {
     this.stamps.push(now);
-    while (this.stamps.length > 0 && now - this.stamps[0]! > 1000) this.stamps.shift();
+    this.trim(now);
   }
 
   rate(now: number): number {
-    while (this.stamps.length > 0 && now - this.stamps[0]! > 1000) this.stamps.shift();
+    this.trim(now);
     return this.stamps.length;
+  }
+
+  private trim(now: number): void {
+    while (this.stamps.length > 0 && now - this.stamps[0]! > 1000) this.stamps.shift();
   }
 }
