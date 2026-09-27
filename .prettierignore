@@ -5,3 +5,4 @@ pnpm-lock.yaml
 **/test-results
 apps/web/public
 ml
+docs/benchmarks/data
