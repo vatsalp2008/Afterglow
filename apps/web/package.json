@@ -8,7 +8,8 @@
     "build": "node scripts/copy-mediapipe-wasm.mjs && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@afterglow/core": "workspace:*",
@@ -21,6 +22,7 @@
     "zustand": "catalog:"
   },
   "devDependencies": {
+    "@playwright/test": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
