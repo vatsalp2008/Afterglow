@@ -21,7 +21,8 @@ export function classifyCameraError(err: unknown): CameraError {
 
 /** Opens the user-facing camera at 640×480 and starts playback into `video`. */
 export async function openCamera(video: HTMLVideoElement): Promise<MediaStream> {
-  if (!navigator.mediaDevices?.getUserMedia) {
+  // mediaDevices is only exposed in secure contexts (https or localhost).
+  if (!('mediaDevices' in navigator)) {
     throw new CameraError('unsupported', 'getUserMedia is not available');
   }
   let stream: MediaStream;

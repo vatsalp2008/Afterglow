@@ -369,7 +369,8 @@ export class Studio {
       this.handleEvents([{ type: 'hover', t: this.eventTime(e), handKey: POINTER_KEY, p: this.pointerSample(e) }]);
       return;
     }
-    const coalesced = e.getCoalescedEvents?.() ?? [];
+    // Older Safari lacks getCoalescedEvents; fall back to the single event.
+    const coalesced = 'getCoalescedEvents' in e ? e.getCoalescedEvents() : [];
     const samples = coalesced.length > 0 ? coalesced : [e];
     this.handleEvents(
       samples.map((ce) => ({ type: 'strokeMove', t: this.eventTime(ce), handKey: POINTER_KEY, p: this.pointerSample(ce) })),
