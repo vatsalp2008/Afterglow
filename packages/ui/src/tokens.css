@@ -1,0 +1,16 @@
+:root {
+  --night: #141a33;
+  --night-deep: #0b0f22;
+  --fog: #8a93b8;
+  --paper: #e9ecf5;
+  --sodium: #ffb547;
+  --tungsten: #ffe3b0;
+  --led-cyan: #5ce1e6;
+  --gel-magenta: #ff4fa3;
+  --gel-violet: #9d7bff;
+  --panel: rgba(16, 21, 44, 0.72);
+  --line: rgba(138, 147, 184, 0.2);
+  --font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+  --font-ui: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  color-scheme: dark;
+}
