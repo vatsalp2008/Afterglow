@@ -5,7 +5,6 @@ Paint with light, using your hands. Afterglow is a real-time, in-browser light-p
 The project is at the prototype stage.
 
 - [`prototype/`](prototype/): working prototype (camera hand tracking, light rendering, timelapse replay and export). Run instructions are in its README.
-- [`PLAN.md`](PLAN.md): the phased build plan.
-- [`AFTERGLOW_PROJECT_BRIEF.md`](AFTERGLOW_PROJECT_BRIEF.md): the full product and engineering brief.
+- [`PLAN.md`](PLAN.md): the phased build plan and its current status.
 
 Video from your camera is processed on your device and never uploaded.
