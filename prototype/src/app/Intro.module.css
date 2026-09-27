@@ -1,0 +1,115 @@
+.intro {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 clamp(24px, 8vw, 120px);
+  background: linear-gradient(90deg, rgba(11, 15, 34, 0.92) 0%, rgba(11, 15, 34, 0.6) 38%, rgba(11, 15, 34, 0) 62%);
+  z-index: 10;
+}
+
+.card {
+  max-width: 460px;
+}
+
+.tag {
+  display: inline-block;
+  margin: 0 0 20px;
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--fog);
+  font-size: 12.5px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(56px, 8vw, 92px);
+  font-weight: 600;
+  font-variation-settings: 'opsz' 96;
+  letter-spacing: -0.03em;
+  line-height: 0.95;
+}
+
+.lede {
+  margin: 18px 0 0;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.body {
+  margin: 14px 0 0;
+  color: var(--fog);
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 32px;
+}
+
+.primary,
+.secondary {
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 150ms ease-out,
+    border-color 150ms ease-out,
+    opacity 150ms ease-out;
+}
+
+.primary {
+  border: 0;
+  background: var(--paper);
+  color: var(--night);
+}
+
+.primary:hover:not(:disabled) {
+  background: #ffffff;
+}
+
+.secondary {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--paper);
+}
+
+.secondary:hover:not(:disabled) {
+  border-color: rgba(138, 147, 184, 0.5);
+}
+
+.primary:disabled,
+.secondary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.status {
+  margin: 24px 0 0;
+  color: var(--tungsten);
+}
+
+.error {
+  margin: 24px 0 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 79, 163, 0.35);
+  border-radius: 12px;
+  background: rgba(255, 79, 163, 0.08);
+  line-height: 1.5;
+}
+
+.privacy {
+  margin: 28px 0 0;
+  color: var(--fog);
+  font-size: 13px;
+  line-height: 1.55;
+}

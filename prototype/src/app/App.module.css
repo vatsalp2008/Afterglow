@@ -1,0 +1,34 @@
+.stage {
+  position: fixed;
+  inset: 0;
+}
+
+.gl,
+.overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.gl {
+  touch-action: none;
+}
+
+.studio .gl {
+  cursor: none;
+}
+
+.overlay {
+  pointer-events: none;
+}
+
+/* The video only feeds the WebGL texture; it is never shown directly. */
+.video {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}

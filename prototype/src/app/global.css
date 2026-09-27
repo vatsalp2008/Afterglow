@@ -1,0 +1,99 @@
+:root {
+  --night: #141a33;
+  --night-deep: #0b0f22;
+  --fog: #8a93b8;
+  --paper: #e9ecf5;
+  --sodium: #ffb547;
+  --tungsten: #ffe3b0;
+  --led-cyan: #5ce1e6;
+  --gel-magenta: #ff4fa3;
+  --gel-violet: #9d7bff;
+  --panel: rgba(16, 21, 44, 0.72);
+  --line: rgba(138, 147, 184, 0.2);
+  --font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+  --font-ui: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--night);
+  color: var(--paper);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--tungsten);
+  outline-offset: 2px;
+}
+
+/* Pen cursors are created and positioned by the studio loop, not React. */
+.pen-cursor {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 5;
+  will-change: transform;
+}
+
+.pen-cursor::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(26px * var(--depth, 1));
+  height: calc(26px * var(--depth, 1));
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1.5px solid var(--pen);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--pen) 55%, transparent);
+  opacity: 0.85;
+  transition:
+    width 120ms ease-out,
+    height 120ms ease-out,
+    opacity 120ms ease-out;
+}
+
+.pen-cursor[data-state='drawing']::before {
+  width: calc(9px * var(--depth, 1));
+  height: calc(9px * var(--depth, 1));
+  background: #fff8ec;
+  border-color: transparent;
+  box-shadow: 0 0 16px 5px color-mix(in srgb, var(--pen) 80%, transparent);
+  opacity: 1;
+}
+
+.pen-cursor[data-state='raw']::before {
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--fog);
+  background: transparent;
+  box-shadow: none;
+  opacity: 0.9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pen-cursor::before {
+    transition: none;
+  }
+}
