@@ -2,11 +2,17 @@ import { useEffect, useRef, useState } from 'react';
 import { Studio } from '../studio/studio';
 import styles from './App.module.css';
 import { Dock } from './Dock';
+import { FixtureCapture } from './FixtureCapture';
 import { Hud } from './Hud';
 import { Intro, Unsupported } from './Intro';
 import { Hint, Toast } from './Overlay';
 import { useShortcuts } from './shortcuts';
 import { useStudioStore } from './store';
+import { TrackerBench } from './TrackerBench';
+
+// Developer tools: ?fixture=<name>[&loop], ?record=fixtures, ?bench=tracker
+const params = new URLSearchParams(location.search);
+const fixture = params.get('fixture');
 
 export function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -33,6 +39,7 @@ export function App() {
     // The studio owns WebGL and camera resources bound to these DOM nodes, so it
     // can only be created after mount; this runs once.
     setStudio(instance);
+    if (instance && fixture) void instance.startFixture(fixture, params.has('loop'));
     return () => {
       if (instance) instance.dispose();
     };
@@ -52,7 +59,9 @@ export function App() {
         <>
           <Hint />
           <Dock studio={studio} />
-          <Hud />
+          <Hud studio={studio} />
+          {params.get('record') === 'fixtures' && <FixtureCapture studio={studio} />}
+          {params.get('bench') === 'tracker' && <TrackerBench studio={studio} />}
         </>
       )}
       <Toast />
