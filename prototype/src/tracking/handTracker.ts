@@ -25,6 +25,7 @@ export class MediaPipeHandTracker {
   private lastTimestamp = -1;
   private rvfcHandle = 0;
   private rafHandle = 0;
+  private reportedError = false;
 
   private constructor(
     private landmarker: HandLandmarker,
@@ -71,9 +72,15 @@ export class MediaPipeHandTracker {
         const timestamp = Math.max(captureTime, this.lastTimestamp + 1);
         this.lastTimestamp = timestamp;
         const t0 = performance.now();
-        const result = this.landmarker.detectForVideo(video, timestamp);
-        const doneAt = performance.now();
-        onFrame(this.toFrame(result, captureTime), { captureTime, hasCaptureTime, inferenceMs: doneAt - t0, doneAt });
+        try {
+          const result = this.landmarker.detectForVideo(video, timestamp);
+          const doneAt = performance.now();
+          onFrame(this.toFrame(result, captureTime), { captureTime, hasCaptureTime, inferenceMs: doneAt - t0, doneAt });
+        } catch (err) {
+          // Keep the loop alive (e.g. across a transient GPU context loss), but don't flood the console.
+          if (!this.reportedError) console.error('[tracker] inference failed', err);
+          this.reportedError = true;
+        }
       }
       schedule();
     };
