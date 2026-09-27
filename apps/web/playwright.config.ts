@@ -1,7 +1,11 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 4391;
 const isCI = Boolean(process.env['CI']);
+const handVideo = fileURLToPath(new URL('./e2e/assets/hand-640x480.mjpeg', import.meta.url));
+// Software WebGL, so rendering works on GPU-less CI machines.
+const softwareGl = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'];
 
 export default defineConfig({
   testDir: './e2e',
@@ -12,16 +16,29 @@ export default defineConfig({
   use: {
     baseURL: `http://127.0.0.1:${String(PORT)}`,
     trace: 'retain-on-failure',
+    ...devices['Desktop Chrome'],
+    // Locally, use the installed Chrome instead of downloading a browser; CI installs Playwright's Chromium.
+    ...(isCI ? {} : { channel: 'chrome' }),
   },
   projects: [
     {
       name: 'chromium',
+      testIgnore: /camera\.spec\.ts/,
+      use: { launchOptions: { args: softwareGl } },
+    },
+    {
+      name: 'camera',
+      testMatch: /camera\.spec\.ts/,
       use: {
-        ...devices['Desktop Chrome'],
-        // Locally, use the installed Chrome instead of downloading a browser; CI installs Playwright's Chromium.
-        ...(isCI ? {} : { channel: 'chrome' }),
-        // Software WebGL, so rendering works the same on GPU-less CI machines.
-        launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] },
+        permissions: ['camera'],
+        launchOptions: {
+          args: [
+            ...(isCI ? softwareGl : []),
+            '--use-fake-ui-for-media-stream',
+            '--use-fake-device-for-media-stream',
+            `--use-file-for-fake-video-capture=${handVideo}`,
+          ],
+        },
       },
     },
   ],

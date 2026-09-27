@@ -1,13 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('pageerror', (err) => errors.push(err.message));
-  page.on('console', (msg) => {
-    if (msg.type() === 'error') errors.push(msg.text());
-  });
-  return errors;
-}
+import { expect, test } from '@playwright/test';
+import { collectErrors } from './errors';
 
 test('paints a stroke with the mouse', async ({ page }) => {
   const errors = collectErrors(page);
