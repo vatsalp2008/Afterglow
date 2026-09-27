@@ -41,7 +41,13 @@ export class Sparks {
     geo.setAttribute('color', this.colors);
     this.object = new LineSegments(
       geo,
-      new LineBasicMaterial({ vertexColors: true, blending: AdditiveBlending, transparent: true, depthTest: false, depthWrite: false }),
+      new LineBasicMaterial({
+        vertexColors: true,
+        blending: AdditiveBlending,
+        transparent: true,
+        depthTest: false,
+        depthWrite: false,
+      }),
     );
     this.object.frustumCulled = false;
   }

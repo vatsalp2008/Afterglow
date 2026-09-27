@@ -25,7 +25,12 @@ export function stressStrokes(frame: FrameSize, t: number, createId: () => strin
     const points: StrokePoint[] = Array.from({ length: 40 }, (_, i) => {
       const u = i / 39;
       const a = phase + u * turns * Math.PI * 2;
-      return { x: cx + Math.cos(a) * r * (0.4 + u), y: cy + Math.sin(a * 1.3) * r, depth: 0.7 + rand() * 0.6, t: t + n };
+      return {
+        x: cx + Math.cos(a) * r * (0.4 + u),
+        y: cy + Math.sin(a * 1.3) * r,
+        depth: 0.7 + rand() * 0.6,
+        t: t + n,
+      };
     });
     return {
       id: createId(),

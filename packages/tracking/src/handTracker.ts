@@ -76,7 +76,12 @@ export class MediaPipeHandTracker {
         try {
           const result = this.landmarker.detectForVideo(video, timestamp);
           const doneAt = performance.now();
-          onFrame(toHandFrame(result, this.frameId++, captureTime), { captureTime, hasCaptureTime, inferenceMs: doneAt - t0, doneAt });
+          onFrame(toHandFrame(result, this.frameId++, captureTime), {
+            captureTime,
+            hasCaptureTime,
+            inferenceMs: doneAt - t0,
+            doneAt,
+          });
         } catch (err) {
           // Keep the loop alive (e.g. across a transient GPU context loss), but don't flood the console.
           if (!this.reportedError) console.error('[tracker] inference failed', err);

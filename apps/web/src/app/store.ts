@@ -36,8 +36,7 @@ export interface Stats {
   hands: HandStat[];
 }
 
-const reducedMotion =
-  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export interface StudioState {
   phase: Phase;

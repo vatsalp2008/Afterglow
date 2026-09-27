@@ -32,7 +32,13 @@ import {
   type Viewport,
 } from '@afterglow/core';
 import { LightRenderer } from '@afterglow/render';
-import { CameraError, openCamera, stopCamera, type MediaPipeHandTracker, type TrackerTiming } from '@afterglow/tracking';
+import {
+  CameraError,
+  openCamera,
+  stopCamera,
+  type MediaPipeHandTracker,
+  type TrackerTiming,
+} from '@afterglow/tracking';
 import { SIZES } from '../app/brushes';
 import { showToast, useStudioStore, type StudioState } from '../app/store';
 import { DemoPen } from './demoPen';
@@ -373,7 +379,12 @@ export class Studio {
     const coalesced = 'getCoalescedEvents' in e ? e.getCoalescedEvents() : [];
     const samples = coalesced.length > 0 ? coalesced : [e];
     this.handleEvents(
-      samples.map((ce) => ({ type: 'strokeMove', t: this.eventTime(ce), handKey: POINTER_KEY, p: this.pointerSample(ce) })),
+      samples.map((ce) => ({
+        type: 'strokeMove',
+        t: this.eventTime(ce),
+        handKey: POINTER_KEY,
+        p: this.pointerSample(ce),
+      })),
     );
   };
 

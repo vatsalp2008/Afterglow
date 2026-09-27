@@ -23,8 +23,10 @@ describe('StrokeBuilder', () => {
   it('drops moves closer than the minimum distance and reports real segments', () => {
     const b = builder();
     b.handle({ type: 'strokeStart', t: 0, handKey: 'Right', p: p(0.5, 0.5) }, style, frame);
-    const tiny = (MIN_POINT_DISTANCE / 2) / frame.width;
-    expect(b.handle({ type: 'strokeMove', t: 1, handKey: 'Right', p: p(0.5 + tiny, 0.5) }, style, frame).kind).toBe('none');
+    const tiny = MIN_POINT_DISTANCE / 2 / frame.width;
+    expect(b.handle({ type: 'strokeMove', t: 1, handKey: 'Right', p: p(0.5 + tiny, 0.5) }, style, frame).kind).toBe(
+      'none',
+    );
     const r = b.handle({ type: 'strokeMove', t: 2, handKey: 'Right', p: p(0.6, 0.5) }, style, frame);
     expect(r).toMatchObject({ kind: 'move', from: { x: 500 }, to: { x: 600 } });
   });

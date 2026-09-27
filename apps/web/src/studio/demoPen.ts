@@ -17,7 +17,10 @@ const TAU = Math.PI * 2;
 const FIGURES: Figure[] = [
   {
     // Loop-de-loop ribbon
-    path: (u) => ({ x: 0.58 + 0.3 * u + 0.05 * Math.cos(u * TAU * 4), y: 0.5 + 0.12 * Math.sin(u * TAU * 4) - 0.08 * Math.sin(u * Math.PI) }),
+    path: (u) => ({
+      x: 0.58 + 0.3 * u + 0.05 * Math.cos(u * TAU * 4),
+      y: 0.5 + 0.12 * Math.sin(u * TAU * 4) - 0.08 * Math.sin(u * Math.PI),
+    }),
     durationMs: 3400,
     color: PALETTE.sodium,
     brush: 'neon',

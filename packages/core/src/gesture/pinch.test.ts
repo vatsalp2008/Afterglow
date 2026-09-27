@@ -35,7 +35,15 @@ describe('pinchRatio', () => {
 describe('PinchTracker', () => {
   it('needs two confirming frames to start and ignores the hysteresis band', () => {
     expect(types(run([1, 0.2, 0.2, 0.2, 0.3, 0.3, 0.4, 0.4, 1]))).toEqual([
-      'hover', 'hover', 'strokeStart', 'strokeMove', 'strokeMove', 'strokeMove', 'strokeEnd', 'hover', 'hover',
+      'hover',
+      'hover',
+      'strokeStart',
+      'strokeMove',
+      'strokeMove',
+      'strokeMove',
+      'strokeEnd',
+      'hover',
+      'hover',
     ]);
   });
 

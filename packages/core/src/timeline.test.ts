@@ -4,8 +4,15 @@ import type { Stroke } from './types';
 
 function stroke(id: string, t0: number, t1: number): Stroke {
   return {
-    id, brush: 'neon', color: '#FFB547', size: 10, createdAt: t0,
-    points: [{ x: 0, y: 0, depth: 1, t: t0 }, { x: 10, y: 0, depth: 1, t: t1 }],
+    id,
+    brush: 'neon',
+    color: '#FFB547',
+    size: 10,
+    createdAt: t0,
+    points: [
+      { x: 0, y: 0, depth: 1, t: t0 },
+      { x: 10, y: 0, depth: 1, t: t1 },
+    ],
   };
 }
 

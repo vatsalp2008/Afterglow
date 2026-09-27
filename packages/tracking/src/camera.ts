@@ -13,8 +13,10 @@ export class CameraError extends Error {
 /** Maps a getUserMedia failure to a kind the UI can explain. */
 export function classifyCameraError(err: unknown): CameraError {
   const name = err instanceof DOMException ? err.name : '';
-  if (name === 'NotAllowedError' || name === 'SecurityError') return new CameraError('denied', 'Camera permission denied');
-  if (name === 'NotFoundError' || name === 'OverconstrainedError') return new CameraError('notFound', 'No camera found');
+  if (name === 'NotAllowedError' || name === 'SecurityError')
+    return new CameraError('denied', 'Camera permission denied');
+  if (name === 'NotFoundError' || name === 'OverconstrainedError')
+    return new CameraError('notFound', 'No camera found');
   if (name === 'NotReadableError' || name === 'AbortError') return new CameraError('inUse', 'Camera is busy');
   return new CameraError('unknown', err instanceof Error ? err.message : String(err));
 }

@@ -59,7 +59,12 @@ export function Dock({ studio }: { studio: Studio }) {
     <Panel as="nav" className={`${styles.dock} ${s.drawing ? styles.receded : ''}`} aria-label="Tools">
       <div className={styles.group} role="group" aria-label="Brush">
         {BRUSHES.map((b) => (
-          <IconButton key={b.id} label={`${b.label} (B)`} pressed={s.brush === b.id} onClick={() => set({ brush: b.id })}>
+          <IconButton
+            key={b.id}
+            label={`${b.label} (B)`}
+            pressed={s.brush === b.id}
+            onClick={() => set({ brush: b.id })}
+          >
             {b.icon}
           </IconButton>
         ))}
@@ -136,7 +141,11 @@ export function Dock({ studio }: { studio: Studio }) {
         >
           {s.replaying && !s.recording ? <StopIcon /> : <PlayIcon />}
         </IconButton>
-        <IconButton label="Save long exposure PNG (S)" disabled={s.strokeCount === 0} onClick={() => void studio.saveStill()}>
+        <IconButton
+          label="Save long exposure PNG (S)"
+          disabled={s.strokeCount === 0}
+          onClick={() => void studio.saveStill()}
+        >
           <StillIcon />
         </IconButton>
         <IconButton

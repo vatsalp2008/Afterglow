@@ -28,20 +28,20 @@ Add `?stress=1` to the URL to load 500 synthetic strokes for render performance 
 
 ## Shortcuts
 
-| Key | Action |
-|---|---|
-| 1 to 5 | Color |
-| B | Next brush (neon, sparks, ink) |
-| [ and ] | Thinner, thicker |
-| F | Fade or fix strokes |
-| D | Darkroom on or off (camera only) |
-| Z, Shift Z | Undo, redo |
-| Delete (twice) | Clear |
-| T | Replay as timelapse |
-| V | Record timelapse video |
-| S | Save long exposure PNG |
-| H | Stats |
-| Esc | Stop replay |
+| Key            | Action                           |
+| -------------- | -------------------------------- |
+| 1 to 5         | Color                            |
+| B              | Next brush (neon, sparks, ink)   |
+| [ and ]        | Thinner, thicker                 |
+| F              | Fade or fix strokes              |
+| D              | Darkroom on or off (camera only) |
+| Z, Shift Z     | Undo, redo                       |
+| Delete (twice) | Clear                            |
+| T              | Replay as timelapse              |
+| V              | Record timelapse video           |
+| S              | Save long exposure PNG           |
+| H              | Stats                            |
+| Esc            | Stop replay                      |
 
 ## How it works
 

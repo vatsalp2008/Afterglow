@@ -6,5 +6,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export function Button({ variant = 'primary', className, type = 'button', ...rest }: ButtonProps) {
-  return <button type={type} className={[styles.button, styles[variant], className].filter(Boolean).join(' ')} {...rest} />;
+  return (
+    <button type={type} className={[styles.button, styles[variant], className].filter(Boolean).join(' ')} {...rest} />
+  );
 }

@@ -79,7 +79,10 @@ export class LightRenderer {
       c.setPixelRatio(pixelRatio);
       c.setSize(viewport.width, viewport.height);
     }
-    (this.composite.uniforms['uResolution']!.value as Vector2).set(viewport.width * pixelRatio, viewport.height * pixelRatio);
+    (this.composite.uniforms['uResolution']!.value as Vector2).set(
+      viewport.width * pixelRatio,
+      viewport.height * pixelRatio,
+    );
     this.updateCamera();
   }
 

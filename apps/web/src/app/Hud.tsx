@@ -55,7 +55,14 @@ function Slider({ label, value, min, max, step, onChange }: SliderProps) {
         <span>{label}</span>
         <span>{value.toFixed(step < 0.1 ? 2 : 1)}</span>
       </span>
-      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} />
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+      />
     </label>
   );
 }
@@ -145,7 +152,11 @@ export function Hud() {
               Show raw signal next to the filtered pen
             </label>
             <label className={styles.check}>
-              <input type="checkbox" checked={s.showSkeleton} onChange={(e) => set({ showSkeleton: e.target.checked })} />
+              <input
+                type="checkbox"
+                checked={s.showSkeleton}
+                onChange={(e) => set({ showSkeleton: e.target.checked })}
+              />
               Show hand skeleton
             </label>
           </section>

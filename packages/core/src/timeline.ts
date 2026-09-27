@@ -51,7 +51,9 @@ export function buildTimeline(
       last.end = Math.max(last.end, iv.end);
       continue;
     }
-    if (last) out = last.out + (last.end - last.start) / opts.speed + Math.min((iv.start - last.end) / opts.speed, opts.maxGapMs);
+    if (last)
+      out =
+        last.out + (last.end - last.start) / opts.speed + Math.min((iv.start - last.end) / opts.speed, opts.maxGapMs);
     spans.push({ start: iv.start, end: iv.end, out });
   }
 
