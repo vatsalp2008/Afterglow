@@ -13,8 +13,8 @@ export function App() {
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const cursorsRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [studio, setStudio] = useState<Studio | null>(null);
-  const [unsupported, setUnsupported] = useState(false);
+  // null until mounted; false if the renderer couldn't start (no WebGL2).
+  const [studio, setStudio] = useState<Studio | false | null>(null);
   const phase = useStudioStore((s) => s.phase);
 
   useEffect(() => {
@@ -23,19 +23,22 @@ export function App() {
     const cursors = cursorsRef.current;
     const video = videoRef.current;
     if (!canvas || !overlay || !cursors || !video) return;
-    let instance: Studio;
+    let instance: Studio | false;
     try {
       instance = new Studio({ canvas, overlay, cursors, video });
     } catch (err) {
       console.error('[app] could not start the renderer', err);
-      setUnsupported(true);
-      return;
+      instance = false;
     }
+    // The studio owns WebGL and camera resources bound to these DOM nodes, so it
+    // can only be created after mount; this runs once.
     setStudio(instance);
-    return () => instance.dispose();
+    return () => {
+      if (instance) instance.dispose();
+    };
   }, []);
 
-  useShortcuts(studio);
+  useShortcuts(studio || null);
 
   return (
     <div className={`${styles.stage} ${phase === 'studio' ? styles.studio : ''}`}>
@@ -43,7 +46,7 @@ export function App() {
       <canvas ref={overlayRef} className={styles.overlay} aria-hidden="true" />
       <div ref={cursorsRef} aria-hidden="true" />
       <video ref={videoRef} className={styles.video} muted playsInline aria-hidden="true" />
-      {unsupported && <Unsupported />}
+      {studio === false && <Unsupported />}
       {studio && phase !== 'studio' && <Intro studio={studio} />}
       {studio && phase === 'studio' && (
         <>
