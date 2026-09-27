@@ -11,18 +11,23 @@ export function Hint() {
       hasDrawn: st.hasDrawn,
       handCount: st.stats.hands.length,
       replaying: st.replaying,
-      recording: st.recording,
+      recordingVideo: st.recordingVideo,
+      session: st.session,
     })),
   );
   let text: string | null = null;
-  if (s.replaying) text = s.recording ? 'Recording your timelapse' : 'Replaying your session. Press Esc to stop.';
+  const recording = s.recordingVideo || s.session !== null;
+  if (s.session) text = s.session.scenario ? `Recording ${s.session.scenario}` : 'Recording session. Press R to stop.';
+  else if (s.replaying)
+    text = s.recordingVideo ? 'Recording your timelapse' : 'Replaying your session. Press Esc to stop.';
+  else if (s.inputMode === 'fixture') text = 'Replaying a recorded hand session';
   else if (!s.hasDrawn && s.inputMode === 'camera')
     text = s.handCount === 0 ? 'Raise a hand so the camera can see it' : 'Pinch your thumb and index finger to draw';
   else if (!s.hasDrawn) text = 'Click and drag to paint. Press H for stats.';
   if (!text) return null;
   return (
     <p className={styles.hint} role="status">
-      {s.recording && <span className={styles.rec} aria-hidden="true" />}
+      {recording && <span className={styles.rec} aria-hidden="true" />}
       {text}
     </p>
   );

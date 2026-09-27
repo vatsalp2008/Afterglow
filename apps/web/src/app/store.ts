@@ -9,14 +9,17 @@ import {
   type OneEuroParams,
   type PenState,
   type PinchConfig,
+  type TrackerDelegate,
+  type TrackerMode,
 } from '@afterglow/core';
-import type { CameraErrorKind } from '@afterglow/tracking';
+import type { CameraDevice, CameraErrorKind, CameraResolution } from '@afterglow/tracking';
 import { PALETTE } from '@afterglow/ui/tokens';
+import type { BlockSummary } from '../studio/trackerBench';
 import type { SizeId } from './brushes';
 
 export type Phase = 'intro' | 'starting' | 'studio';
-export type InputMode = 'camera' | 'pointer';
-export type StartError = CameraErrorKind | 'model';
+export type InputMode = 'camera' | 'pointer' | 'fixture';
+export type StartError = CameraErrorKind | 'model' | 'fixture';
 
 export interface HandStat {
   key: string;
@@ -31,9 +34,21 @@ export interface Stats {
   landmarkP95: number | null;
   inkP50: number | null;
   inkP95: number | null;
+  mainThreadP50: number | null;
+  mainThreadP95: number | null;
   hasCaptureTime: boolean;
-  delegate: 'GPU' | 'CPU' | null;
+  tracker: TrackerMode | null;
+  delegate: TrackerDelegate | null;
+  droppedFrames: number;
+  skippedFrames: number;
   hands: HandStat[];
+}
+
+export interface BenchState {
+  status: 'running' | 'done' | 'error';
+  progress: string;
+  blocks: BlockSummary[];
+  error?: string;
 }
 
 const reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -53,8 +68,14 @@ export interface StudioState {
   hudOpen: boolean;
   showSkeleton: boolean;
   showRaw: boolean;
+  /** Natural video with the skeleton and raw signal: for checking tracking. */
+  debugView: boolean;
   oneEuro: OneEuroParams;
   pinch: PinchConfig;
+
+  cameras: CameraDevice[];
+  cameraId: string | null;
+  resolution: CameraResolution;
 
   stats: Stats;
   strokeCount: number;
@@ -63,7 +84,11 @@ export interface StudioState {
   drawing: boolean;
   hasDrawn: boolean;
   replaying: boolean;
-  recording: boolean;
+  /** A timelapse video is being recorded. */
+  recordingVideo: boolean;
+  /** A hand session (fixture) is being recorded. */
+  session: { scenario: string | null } | null;
+  bench: BenchState | null;
   toast: { id: number; text: string } | null;
   reducedMotion: boolean;
 }
@@ -83,8 +108,13 @@ export const useStudioStore = create<StudioState>()(() => ({
   hudOpen: false,
   showSkeleton: false,
   showRaw: false,
+  debugView: false,
   oneEuro: DEFAULT_ONE_EURO,
   pinch: DEFAULT_PINCH,
+
+  cameras: [],
+  cameraId: null,
+  resolution: '640x480',
 
   stats: {
     trackingFps: 0,
@@ -93,8 +123,13 @@ export const useStudioStore = create<StudioState>()(() => ({
     landmarkP95: null,
     inkP50: null,
     inkP95: null,
+    mainThreadP50: null,
+    mainThreadP95: null,
     hasCaptureTime: false,
+    tracker: null,
     delegate: null,
+    droppedFrames: 0,
+    skippedFrames: 0,
     hands: [],
   },
   strokeCount: 0,
@@ -103,7 +138,9 @@ export const useStudioStore = create<StudioState>()(() => ({
   drawing: false,
   hasDrawn: false,
   replaying: false,
-  recording: false,
+  recordingVideo: false,
+  session: null,
+  bench: null,
   toast: null,
   reducedMotion,
 }));

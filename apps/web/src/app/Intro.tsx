@@ -9,6 +9,7 @@ const ERROR_COPY: Record<StartError, string> = {
   inUse: 'Your camera is being used by another app. Close it and try again.',
   unsupported: 'This browser can’t use the camera here. Try a current version of Chrome, Edge, or Firefox.',
   model: 'Hand tracking didn’t load. Check your connection and try again.',
+  fixture: 'That recorded session couldn’t be loaded. Check the fixture name in the address bar.',
   unknown: 'The camera couldn’t start. Try again, or paint with a mouse for now.',
 };
 

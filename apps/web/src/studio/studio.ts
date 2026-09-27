@@ -26,6 +26,7 @@ import {
   type InputEvent,
   type PenSample,
   type PenState,
+  type SessionRecording,
   type Stroke,
   type StrokeStyle,
   type Timeline,
@@ -34,20 +35,30 @@ import {
 import { LightRenderer } from '@afterglow/render';
 import {
   CameraError,
+  FixtureTracker,
+  listCameras,
   openCamera,
   stopCamera,
-  type MediaPipeHandTracker,
+  type CameraOptions,
+  type HandTracker,
   type TrackerTiming,
 } from '@afterglow/tracking';
 import { SIZES } from '../app/brushes';
 import { showToast, useStudioStore, type StudioState } from '../app/store';
 import { DemoPen } from './demoPen';
+import { download, downloadJson, stamp } from './download';
+import { loadFixture } from './fixtures';
+import type { Scenario } from './scenarios';
+import { SessionCapture } from './sessionCapture';
 import { STRESS_STROKES, stressStrokes } from './stress';
 import { RateCounter, RollingStats } from './telemetry';
+import { TimelapseRecorder } from './timelapseRecorder';
+import { BenchCollector, type BlockSummary } from './trackerBench';
 
 const FADE_TAU_MS = 2600;
 const INTRO_FADE_TAU_MS = 1300;
 const POINTER_KEY = 'pointer';
+const WASM_BASE_PATH = `${import.meta.env.BASE_URL}mediapipe`;
 
 export interface StudioElements {
   canvas: HTMLCanvasElement;
@@ -69,18 +80,11 @@ interface Replay {
 }
 
 const newId = () => crypto.randomUUID();
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-function download(blob: Blob, name: string): void {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-function stamp(): string {
-  return new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+/** `?tracker=main|worker` overrides where inference runs (see ADR 0003). */
+function trackerPreference(): 'worker' | 'main' {
+  return new URLSearchParams(location.search).get('tracker') === 'main' ? 'main' : 'worker';
 }
 
 export class Studio {
@@ -89,8 +93,9 @@ export class Studio {
   private builder = new StrokeBuilder(newId);
   private filter = new LandmarkFilter(useStudioStore.getState().oneEuro);
   private pinch = new PinchTracker(useStudioStore.getState().pinch);
-  private tracker: MediaPipeHandTracker | null = null;
+  private tracker: HandTracker | null = null;
   private stream: MediaStream | null = null;
+  private videoSize = { width: 0, height: 0 };
   private frame: FrameSize = frameForAspect(16 / 9);
   private viewport: Viewport = { width: 1, height: 1 };
   private fit: CoverFit = { scale: 1, offsetX: 0, offsetY: 0 };
@@ -106,7 +111,10 @@ export class Studio {
   private liveDirty = true;
   private syncedVersion = -1;
   private replay: Replay | null = null;
-  private recorder: MediaRecorder | null = null;
+  private timelapse: TimelapseRecorder;
+  private session = new SessionCapture();
+  private bench: BenchCollector | null = null;
+  private benchRunning = false;
   private clearArmedUntil = 0;
   private pointerActive = false;
 
@@ -121,7 +129,10 @@ export class Studio {
   private renderRate = new RateCounter();
   private landmarkLatency = new RollingStats();
   private inkLatency = new RollingStats();
+  private mainThreadCost = new RollingStats();
   private hasCaptureTime = false;
+  private droppedFrames = 0;
+  private skippedFrames = 0;
   private pendingCapture: number | null = null;
   private lastStatsAt = 0;
   private lastFrameAt = performance.now();
@@ -138,9 +149,12 @@ export class Studio {
       canRedo: false,
       drawing: false,
       replaying: false,
-      recording: false,
+      recordingVideo: false,
+      session: null,
+      bench: null,
     });
     this.renderer = new LightRenderer(els.canvas);
+    this.timelapse = new TimelapseRecorder(els.canvas, () => showToast('Timelapse video saved'));
     this.overlayCtx = els.overlay.getContext('2d');
     this.renderer.setGrain(1, !this.reducedMotion);
     this.resize();
@@ -177,7 +191,7 @@ export class Studio {
     const set = useStudioStore.setState;
     set({ phase: 'starting', error: null, loadingMessage: 'Waiting for camera permission' });
     try {
-      this.stream ??= await openCamera(this.els.video);
+      this.stream ??= await openCamera(this.els.video, this.cameraOptions());
     } catch (err) {
       set({ phase: 'intro', loadingMessage: null, error: err instanceof CameraError ? err.kind : 'unknown' });
       return;
@@ -185,18 +199,48 @@ export class Studio {
     set({ loadingMessage: 'Loading hand tracking (about 8 MB)' });
     try {
       // Loaded on demand so pointer-only visitors never download MediaPipe.
-      const { MediaPipeHandTracker } = await import('@afterglow/tracking/mediapipe');
-      this.tracker ??= await MediaPipeHandTracker.create(`${import.meta.env.BASE_URL}mediapipe`);
+      const { createHandTracker } = await import('@afterglow/tracking/mediapipe');
+      this.tracker ??= await createHandTracker({
+        mode: trackerPreference(),
+        video: this.els.video,
+        wasmBasePath: WASM_BASE_PATH,
+      });
     } catch (err) {
       console.error('[studio] hand tracker failed to load', err);
       set({ phase: 'intro', loadingMessage: null, error: 'model' });
       return;
     }
-    const v = this.els.video;
-    this.frame = frameForAspect(v.videoWidth / v.videoHeight);
-    this.renderer.setVideo(v);
-    this.tracker.start(v, this.onTrackerFrame);
+    this.useVideoFrame();
+    this.renderer.setVideo(this.els.video);
+    this.tracker.start(this.onTrackerFrame);
     set({ inputMode: 'camera' });
+    this.enterStudio();
+    void this.refreshCameras();
+  }
+
+  /** Replays a recorded session from fixtures/sessions instead of a camera. */
+  async startFixture(name: string, loop = false): Promise<void> {
+    const set = useStudioStore.setState;
+    set({ phase: 'starting', error: null, loadingMessage: `Loading fixture ${name}` });
+    let recording: SessionRecording;
+    try {
+      recording = await loadFixture(name);
+    } catch (err) {
+      console.error('[studio] fixture failed to load', err);
+      set({ phase: 'intro', loadingMessage: null, error: 'fixture' });
+      return;
+    }
+    this.videoSize = { width: recording.meta.videoWidth, height: recording.meta.videoHeight };
+    this.frame = frameForAspect(this.videoSize.width / this.videoSize.height);
+    this.renderer.setVideo(null);
+    this.tracker = new FixtureTracker(recording, {
+      loop,
+      onEnd: () => {
+        showToast(`Fixture ${name} finished`);
+      },
+    });
+    this.tracker.start(this.onTrackerFrame);
+    set({ inputMode: 'fixture' });
     this.enterStudio();
   }
 
@@ -208,10 +252,27 @@ export class Studio {
     this.enterStudio();
   }
 
+  /** Reopens the camera with a different device or resolution. */
+  async switchCamera(opts: CameraOptions): Promise<void> {
+    if (!this.stream) return;
+    this.tracker?.stop();
+    stopCamera(this.stream);
+    this.stream = null;
+    try {
+      this.stream = await openCamera(this.els.video, opts);
+    } catch (err) {
+      console.error('[studio] camera switch failed', err);
+      showToast('That camera could not be opened');
+      this.stream = await openCamera(this.els.video, {}).catch(() => null);
+    }
+    this.useVideoFrame();
+    this.tracker?.start(this.onTrackerFrame);
+    void this.refreshCameras();
+  }
+
   dispose(): void {
     cancelAnimationFrame(this.raf);
-    this.stopRecording();
-    this.tracker?.stop(this.els.video);
+    this.timelapse.stop();
     this.tracker?.close();
     stopCamera(this.stream);
     for (const d of this.disposers) d();
@@ -233,12 +294,29 @@ export class Studio {
       useStudioStore.setState({ fade: false });
       showToast(`Stress test: ${STRESS_STROKES} synthetic strokes`);
     }
-    const s = useStudioStore.getState();
-    this.renderer.setFadeTau(s.fade ? FADE_TAU_MS : 0);
-    this.renderer.setDarkroom(s.darkroom ? 1 : 0);
+    this.renderer.setFadeTau(this.currentFadeTau());
+    this.renderer.setDarkroom(this.view().darkroom ? 1 : 0);
     this.syncedVersion = -1;
     this.liveDirty = true;
     useStudioStore.setState({ phase: 'studio', loadingMessage: null });
+  }
+
+  private useVideoFrame(): void {
+    const v = this.els.video;
+    this.videoSize = { width: v.videoWidth, height: v.videoHeight };
+    this.frame = frameForAspect(v.videoWidth / v.videoHeight);
+    this.resize();
+  }
+
+  private cameraOptions(): CameraOptions {
+    const s = useStudioStore.getState();
+    return { resolution: s.resolution, ...(s.cameraId ? { deviceId: s.cameraId } : {}) };
+  }
+
+  private async refreshCameras(): Promise<void> {
+    const cameras = await listCameras();
+    const activeId = this.stream?.getVideoTracks()[0]?.getSettings().deviceId ?? null;
+    useStudioStore.setState({ cameras, cameraId: activeId });
   }
 
   // ---- tools ---------------------------------------------------------------
@@ -290,8 +368,8 @@ export class Studio {
     this.renderer.setStrokes([]);
     this.renderer.sparks.clear();
     this.renderer.setVideoOpacity(0);
-    if (record) this.startRecording();
-    useStudioStore.setState({ replaying: true, recording: this.recorder !== null });
+    if (record && !this.timelapse.start()) showToast('Video recording is not supported in this browser');
+    useStudioStore.setState({ replaying: true, recordingVideo: this.timelapse.active });
   }
 
   stopReplay(): void {
@@ -301,8 +379,117 @@ export class Studio {
     this.renderer.setVideoOpacity(1);
     this.syncedVersion = -1;
     this.liveDirty = true;
-    this.stopRecording();
-    useStudioStore.setState({ replaying: false, recording: false });
+    this.timelapse.stop();
+    useStudioStore.setState({ replaying: false, recordingVideo: false });
+  }
+
+  // ---- session recording ---------------------------------------------------
+
+  get canRecordSession(): boolean {
+    return this.tracker !== null && this.mode === 'studio';
+  }
+
+  /** R toggles an ad-hoc recording of raw tracker frames. */
+  toggleSessionRecording(): void {
+    if (this.session.active) this.stopSession();
+    else this.startSession(null);
+  }
+
+  startSession(scenario: Scenario | null): void {
+    if (!this.canRecordSession) {
+      showToast('Start the camera to record a session');
+      return;
+    }
+    this.session.start(scenario);
+    useStudioStore.setState({ session: { scenario: scenario?.id ?? null } });
+    if (!scenario) showToast('Recording session. Press R to stop.');
+  }
+
+  stopSession(): void {
+    if (!this.session.active || !this.tracker) return;
+    const { recording, fileName } = this.session.finish(
+      {
+        userAgent: navigator.userAgent,
+        recordedAt: new Date().toISOString(),
+        videoWidth: this.videoSize.width,
+        videoHeight: this.videoSize.height,
+        tracker: this.tracker.mode,
+        delegate: this.tracker.delegate,
+      },
+      `afterglow-session-${stamp()}`,
+    );
+    useStudioStore.setState({ session: null });
+    if (recording.frames.length === 0) {
+      showToast('Nothing was recorded. Is a hand in view?');
+      return;
+    }
+    downloadJson(recording, fileName);
+    showToast(`Saved ${fileName} (${String(recording.frames.length)} frames)`);
+  }
+
+  cancelSession(): void {
+    this.session.cancel();
+    useStudioStore.setState({ session: null });
+  }
+
+  // ---- tracker benchmark (ADR 0003) ----------------------------------------
+
+  /**
+   * Alternates main-thread and worker tracking in blocks on the live camera, while
+   * rendering. Each block gets a fresh tracker and closes it afterwards, so only
+   * one MediaPipe instance (and GPU context) exists at a time.
+   */
+  async runTrackerBench(blockMs = 10_000, warmupMs = 2000): Promise<void> {
+    if (this.benchRunning || !this.stream || !this.tracker) return;
+    this.benchRunning = true;
+    const set = (bench: StudioState['bench']) => {
+      useStudioStore.setState({ bench });
+    };
+    const blocks: BlockSummary[] = [];
+    const restoreMode = this.tracker.mode === 'main' ? 'main' : 'worker';
+    this.tracker.close();
+    this.tracker = null;
+    const opts = { video: this.els.video, wasmBasePath: WASM_BASE_PATH };
+    const { MainThreadHandTracker, WorkerHandTracker, createHandTracker } =
+      await import('@afterglow/tracking/mediapipe');
+    try {
+      const order = ['main', 'worker', 'main', 'worker'] as const;
+      for (const [i, mode] of order.entries()) {
+        set({ status: 'running', progress: `Block ${String(i + 1)} of 4: ${mode}`, blocks: [...blocks] });
+        const tracker =
+          mode === 'main' ? await MainThreadHandTracker.create(opts) : await WorkerHandTracker.create(opts);
+        this.tracker = tracker;
+        tracker.start(this.onTrackerFrame);
+        await sleep(warmupMs);
+        this.bench = new BenchCollector(performance.now());
+        await sleep(blockMs);
+        blocks.push(this.bench.summarize(tracker.mode, tracker.delegate, performance.now()));
+        this.bench = null;
+        tracker.close();
+        this.tracker = null;
+      }
+      set({ status: 'done', progress: 'Done', blocks });
+    } catch (err) {
+      console.error('[studio] tracker benchmark failed', err);
+      set({ status: 'error', progress: '', blocks, error: err instanceof Error ? err.message : String(err) });
+    } finally {
+      this.bench = null;
+      this.tracker?.close();
+      this.tracker = await createHandTracker({ ...opts, mode: restoreMode });
+      this.tracker.start(this.onTrackerFrame);
+      this.benchRunning = false;
+    }
+  }
+
+  benchEnvironment(): Record<string, unknown> {
+    return {
+      userAgent: navigator.userAgent,
+      gpu: this.renderer.gpuDescription(),
+      video: `${String(this.videoSize.width)}x${String(this.videoSize.height)}`,
+      viewport: `${String(this.viewport.width)}x${String(this.viewport.height)}@${String(this.dpr)}`,
+      strokes: this.history.strokes.length,
+      recordedAt: new Date().toISOString(),
+    };
   }
 
   // ---- input ---------------------------------------------------------------
@@ -310,8 +497,13 @@ export class Studio {
   private onTrackerFrame = (frame: HandFrame, timing: TrackerTiming): void => {
     this.trackRate.tick(timing.doneAt);
     this.landmarkLatency.push(timing.doneAt - timing.captureTime);
+    this.mainThreadCost.push(timing.mainThreadMs);
     this.hasCaptureTime = timing.hasCaptureTime;
+    this.droppedFrames = timing.droppedFrames;
+    this.skippedFrames = timing.skippedFrames;
     this.pendingCapture = timing.captureTime;
+    this.bench?.onTrackerFrame(timing);
+    this.session.push(frame);
 
     const local: HandFrame = { ...frame, captureTime: frame.captureTime - this.t0 };
     const aspect = this.frame.width / this.frame.height;
@@ -403,6 +595,7 @@ export class Studio {
 
   private tick = (ts: number): void => {
     this.raf = requestAnimationFrame(this.tick);
+    this.bench?.onRenderFrame(ts - this.lastFrameAt);
     const dt = Math.min(0.1, Math.max(0, (ts - this.lastFrameAt) / 1000));
     this.lastFrameAt = ts;
     const now = this.now();
@@ -488,7 +681,7 @@ export class Studio {
   }
 
   private drawCursors(): void {
-    const showRaw = useStudioStore.getState().showRaw && this.mode === 'studio';
+    const showRaw = this.view().raw && this.mode === 'studio';
     const wanted = new Map<string, { p: PenSample; state: string; color: string }>();
     for (const [key, pen] of this.pens) wanted.set(key, pen);
     if (showRaw) for (const [key, p] of this.rawPens) wanted.set(`raw:${key}`, { p, state: 'raw', color: '#8A93B8' });
@@ -520,7 +713,7 @@ export class Studio {
     const ctx = this.overlayCtx;
     if (!ctx) return;
     ctx.clearRect(0, 0, this.els.overlay.width, this.els.overlay.height);
-    if (!useStudioStore.getState().showSkeleton || !this.lastFiltered || this.mode !== 'studio') return;
+    if (!this.view().skeleton || !this.lastFiltered || this.mode !== 'studio') return;
     ctx.save();
     ctx.scale(this.dpr, this.dpr);
     ctx.lineWidth = 1.5;
@@ -553,8 +746,13 @@ export class Studio {
         landmarkP95: this.landmarkLatency.percentile(95),
         inkP50: this.inkLatency.percentile(50),
         inkP95: this.inkLatency.percentile(95),
+        mainThreadP50: this.mainThreadCost.percentile(50),
+        mainThreadP95: this.mainThreadCost.percentile(95),
         hasCaptureTime: this.hasCaptureTime,
+        tracker: this.tracker?.mode ?? null,
         delegate: this.tracker?.delegate ?? null,
+        droppedFrames: this.droppedFrames,
+        skippedFrames: this.skippedFrames,
         hands,
       },
       drawing: this.builder.activeStrokes().length > 0,
@@ -563,12 +761,24 @@ export class Studio {
 
   // ---- helpers -------------------------------------------------------------
 
+  /** Effective view flags: debug view shows the natural video, skeleton, and raw signal. */
+  private view(): { darkroom: boolean; skeleton: boolean; raw: boolean } {
+    const s = useStudioStore.getState();
+    return {
+      darkroom: s.darkroom && !s.debugView,
+      skeleton: s.showSkeleton || s.debugView,
+      raw: s.showRaw || s.debugView,
+    };
+  }
+
   private onSettings = (s: StudioState, prev: StudioState): void => {
     if (s.fade !== prev.fade) this.renderer.setFadeTau(this.currentFadeTau());
-    if (s.darkroom !== prev.darkroom) this.renderer.setDarkroom(s.darkroom ? 1 : 0);
+    if (s.darkroom !== prev.darkroom || s.debugView !== prev.debugView) {
+      this.renderer.setDarkroom(this.view().darkroom ? 1 : 0);
+    }
     if (s.oneEuro !== prev.oneEuro) this.filter.setParams(s.oneEuro);
     if (s.pinch !== prev.pinch) this.pinch.config = s.pinch;
-    if (s.showSkeleton !== prev.showSkeleton) this.overlayDirty = true;
+    if (s.showSkeleton !== prev.showSkeleton || s.debugView !== prev.debugView) this.overlayDirty = true;
   };
 
   private currentFadeTau(): number {
@@ -595,37 +805,4 @@ export class Studio {
     this.els.overlay.height = Math.round(this.viewport.height * this.dpr);
     this.overlayDirty = true;
   };
-
-  private startRecording(): void {
-    const canvas = this.els.canvas;
-    const mimeType =
-      typeof MediaRecorder === 'undefined'
-        ? undefined
-        : ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'].find((t) =>
-            MediaRecorder.isTypeSupported(t),
-          );
-    if (!mimeType || typeof canvas.captureStream !== 'function') {
-      showToast('Video recording is not supported in this browser');
-      return;
-    }
-    const stream = canvas.captureStream(60);
-    const chunks: Blob[] = [];
-    const rec = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 10_000_000 });
-    rec.ondataavailable = (e) => {
-      if (e.data.size > 0) chunks.push(e.data);
-    };
-    rec.onstop = () => {
-      for (const t of stream.getTracks()) t.stop();
-      const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
-      download(new Blob(chunks, { type: mimeType }), `afterglow-timelapse-${stamp()}.${ext}`);
-      showToast('Timelapse video saved');
-    };
-    rec.start(250);
-    this.recorder = rec;
-  }
-
-  private stopRecording(): void {
-    if (this.recorder && this.recorder.state !== 'inactive') this.recorder.stop();
-    this.recorder = null;
-  }
 }

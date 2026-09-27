@@ -48,7 +48,7 @@ export function Dock({ studio }: { studio: Studio }) {
       canRedo: st.canRedo,
       strokeCount: st.strokeCount,
       replaying: st.replaying,
-      recording: st.recording,
+      recording: st.recordingVideo,
       drawing: st.drawing,
       hudOpen: st.hudOpen,
     })),

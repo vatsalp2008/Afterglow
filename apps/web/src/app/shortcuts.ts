@@ -67,6 +67,9 @@ export function useShortcuts(studio: Studio | null): void {
         case 's':
           void studio.saveStill();
           break;
+        case 'r':
+          studio.toggleSessionRecording();
+          break;
         case 'backspace':
         case 'delete':
           e.preventDefault();
