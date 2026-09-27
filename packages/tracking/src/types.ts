@@ -26,3 +26,10 @@ export interface HandTracker {
   stop(): void;
   close(): void;
 }
+
+export interface CameraTrackerOptions {
+  video: HTMLVideoElement;
+  /** URL of the directory serving the MediaPipe WASM runtime. */
+  wasmBasePath: string;
+  modelUrl?: string;
+}

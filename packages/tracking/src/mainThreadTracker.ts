@@ -4,15 +4,8 @@
 import type { HandLandmarker } from '@mediapipe/tasks-vision';
 import { toHandFrame } from './handFrame';
 import { createLandmarker } from './landmarker';
-import type { FrameListener, HandTracker } from './types';
+import type { CameraTrackerOptions, FrameListener, HandTracker } from './types';
 import { watchVideoFrames } from './videoFrames';
-
-export interface CameraTrackerOptions {
-  video: HTMLVideoElement;
-  /** URL of the directory serving the MediaPipe WASM runtime. */
-  wasmBasePath: string;
-  modelUrl?: string;
-}
 
 export class MainThreadHandTracker implements HandTracker {
   readonly mode = 'main' as const;

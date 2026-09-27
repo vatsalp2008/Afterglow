@@ -6,8 +6,7 @@
 // an older waiting one, so latency can't build up.
 
 import { toHandFrame } from './handFrame';
-import type { CameraTrackerOptions } from './mainThreadTracker';
-import type { FrameListener, HandTracker } from './types';
+import type { CameraTrackerOptions, FrameListener, HandTracker } from './types';
 import { watchVideoFrames, type VideoFrameInfo } from './videoFrames';
 import type { WorkerRequest, WorkerResponse } from './worker/protocol';
 

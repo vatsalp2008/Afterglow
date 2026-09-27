@@ -6,7 +6,8 @@
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
-    "./mediapipe": "./src/mediapipe.ts"
+    "./mediapipe": "./src/mediapipe.ts",
+    "./main-thread": "./src/mainThreadTracker.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit && tsc --noEmit -p src/worker",

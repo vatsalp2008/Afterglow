@@ -450,8 +450,8 @@ export class Studio {
     this.tracker.close();
     this.tracker = null;
     const opts = { video: this.els.video, wasmBasePath: WASM_BASE_PATH };
-    const { MainThreadHandTracker, WorkerHandTracker, createHandTracker } =
-      await import('@afterglow/tracking/mediapipe');
+    const { WorkerHandTracker, createHandTracker } = await import('@afterglow/tracking/mediapipe');
+    const { MainThreadHandTracker } = await import('@afterglow/tracking/main-thread');
     try {
       const order = ['main', 'worker', 'main', 'worker'] as const;
       for (const [i, mode] of order.entries()) {

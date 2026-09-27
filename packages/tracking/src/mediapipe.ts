@@ -1,11 +1,11 @@
 // MediaPipe-backed trackers. Kept behind the "@afterglow/tracking/mediapipe"
 // entry point so apps can lazy-load MediaPipe only when the camera is used.
+// The worker loads MediaPipe inside itself; the main-thread tracker (and its
+// copy of MediaPipe) is only downloaded if the worker can't start.
 
-import { MainThreadHandTracker, type CameraTrackerOptions } from './mainThreadTracker';
-import type { HandTracker } from './types';
+import type { CameraTrackerOptions, HandTracker } from './types';
 import { WorkerHandTracker } from './workerTracker';
 
-export { MainThreadHandTracker, type CameraTrackerOptions } from './mainThreadTracker';
 export { WorkerHandTracker } from './workerTracker';
 
 export interface CreateHandTrackerOptions extends CameraTrackerOptions {
@@ -21,5 +21,6 @@ export async function createHandTracker(opts: CreateHandTrackerOptions): Promise
       console.warn('[tracker] worker unavailable, running on the main thread', err);
     }
   }
+  const { MainThreadHandTracker } = await import('./mainThreadTracker');
   return MainThreadHandTracker.create(opts);
 }

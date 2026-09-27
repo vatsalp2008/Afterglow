@@ -15,4 +15,4 @@ export {
 } from './camera';
 export { FixtureTracker, type FixtureTrackerOptions, type Scheduler } from './fixtureTracker';
 export { packResult, toHandFrame, type LandmarkResult } from './handFrame';
-export type { FrameListener, HandTracker, TrackerTiming } from './types';
+export type { CameraTrackerOptions, FrameListener, HandTracker, TrackerTiming } from './types';
