@@ -1,5 +1,20 @@
 import type { HandFrame, Handedness, TrackedHand } from '@afterglow/core';
-import type { HandLandmarkerResult } from '@mediapipe/tasks-vision';
+
+/** The parts of a HandLandmarkerResult the pipeline uses, as plain cloneable data. */
+export interface LandmarkResult {
+  landmarks: ReadonlyArray<ReadonlyArray<{ x: number; y: number; z: number }>>;
+  handedness: ReadonlyArray<ReadonlyArray<{ categoryName: string; score: number }>>;
+}
+
+/** Strips a MediaPipe result down to plain data, e.g. to post it from a worker. */
+export function packResult(result: LandmarkResult): LandmarkResult {
+  return {
+    landmarks: result.landmarks.map((hand) => hand.map((p) => ({ x: p.x, y: p.y, z: p.z }))),
+    handedness: result.handedness.map((cats) =>
+      cats.slice(0, 1).map((c) => ({ categoryName: c.categoryName, score: c.score })),
+    ),
+  };
+}
 
 /**
  * Converts a HandLandmarker result into a HandFrame.
@@ -9,11 +24,7 @@ import type { HandLandmarkerResult } from '@mediapipe/tasks-vision';
  * receive the same label; the second gets a distinct key so per-hand state
  * never collides.
  */
-export function toHandFrame(
-  result: Pick<HandLandmarkerResult, 'landmarks' | 'handedness'>,
-  frameId: number,
-  captureTime: number,
-): HandFrame {
+export function toHandFrame(result: LandmarkResult, frameId: number, captureTime: number): HandFrame {
   const used = new Set<string>();
   const hands: TrackedHand[] = result.landmarks.map((landmarks, i) => {
     const category = result.handedness[i]?.[0];

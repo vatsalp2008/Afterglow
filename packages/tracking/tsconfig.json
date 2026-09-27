@@ -3,5 +3,7 @@
   "compilerOptions": {
     "lib": ["ES2023", "DOM", "DOM.Iterable"]
   },
-  "include": ["src"]
+  "include": ["src"],
+  // The worker is typechecked on its own, against worker globals.
+  "exclude": ["src/worker"]
 }

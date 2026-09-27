@@ -6,10 +6,10 @@
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
-    "./mediapipe": "./src/handTracker.ts"
+    "./mediapipe": "./src/mediapipe.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p src/worker",
     "test": "vitest run"
   },
   "dependencies": {

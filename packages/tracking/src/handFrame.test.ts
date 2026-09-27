@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { toHandFrame } from './handFrame';
+import { packResult, toHandFrame } from './handFrame';
 
 const landmark = (x: number) => ({ x, y: 0.5, z: 0, visibility: 0.9 });
 const category = (categoryName: string, score = 0.9) => [{ categoryName, score, index: 0, displayName: '' }];
@@ -26,5 +26,19 @@ describe('toHandFrame', () => {
   it('tolerates a missing handedness entry', () => {
     const frame = toHandFrame({ landmarks: [[landmark(0.5)]], handedness: [] }, 0, 0);
     expect(frame.hands[0]).toMatchObject({ handedness: 'Left', score: 0 });
+  });
+});
+
+describe('packResult', () => {
+  it('strips a result to plain landmarks and the top handedness category', () => {
+    const packed = packResult({
+      landmarks: [[landmark(0.3)]],
+      handedness: [[...category('Left', 0.8), ...category('Right', 0.2)]],
+    });
+    expect(packed).toEqual({
+      landmarks: [[{ x: 0.3, y: 0.5, z: 0 }]],
+      handedness: [[{ categoryName: 'Left', score: 0.8 }]],
+    });
+    expect(toHandFrame(packed, 0, 0).hands[0]?.handedness).toBe('Right');
   });
 });
