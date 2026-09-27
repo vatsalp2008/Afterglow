@@ -1,0 +1,23 @@
+{
+  "name": "@afterglow/render",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@afterglow/core": "workspace:*",
+    "three": "catalog:"
+  },
+  "devDependencies": {
+    "@types/three": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

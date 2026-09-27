@@ -3,8 +3,7 @@
 // fragment shader can shade a hot core and soft edge from |aAcross| alone.
 
 import { BufferGeometry, Color, Float32BufferAttribute } from 'three';
-import { densify } from '../core/stroke/catmullRom';
-import type { Stroke, StrokePoint } from '../core/types';
+import { densify, type Stroke, type StrokePoint } from '@afterglow/core';
 
 const SPACING = 2.5;
 const CAP_SEGMENTS = 8;

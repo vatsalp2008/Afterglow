@@ -10,7 +10,7 @@ import {
   LineBasicMaterial,
   LineSegments,
 } from 'three';
-import type { Vec2 } from '../core/types';
+import type { Vec2 } from '@afterglow/core';
 
 const MAX = 4000;
 const GRAVITY = 900; // canvas units / s²
