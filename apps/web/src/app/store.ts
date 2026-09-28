@@ -53,6 +53,24 @@ export interface BenchState {
 
 const reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+const PINCH_KEY = 'afterglow:pinch-calibration';
+const OFFERED_KEY = 'afterglow:calibration-offered';
+
+/** Pinch thresholds from a saved calibration, if any. */
+function savedPinch(): PinchConfig | null {
+  try {
+    const raw = JSON.parse(localStorage.getItem(PINCH_KEY) ?? 'null') as { enter?: unknown; exit?: unknown } | null;
+    if (typeof raw?.enter === 'number' && typeof raw.exit === 'number' && raw.exit > raw.enter) {
+      return { ...DEFAULT_PINCH, enter: raw.enter, exit: raw.exit };
+    }
+  } catch {
+    // Storage unavailable or corrupt: fall back to the tuned defaults.
+  }
+  return null;
+}
+
+const saved = typeof localStorage === 'undefined' ? null : savedPinch();
+
 export interface StudioState {
   phase: Phase;
   inputMode: InputMode;
@@ -72,6 +90,10 @@ export interface StudioState {
   debugView: boolean;
   filter: FilterSpec;
   pinch: PinchConfig;
+  /** Whether the pinch thresholds come from this user's calibration. */
+  calibrated: boolean;
+  calibrationOpen: boolean;
+  calibrationOffered: boolean;
 
   cameras: CameraDevice[];
   cameraId: string | null;
@@ -110,7 +132,10 @@ export const useStudioStore = create<StudioState>()(() => ({
   showRaw: false,
   debugView: false,
   filter: DEFAULT_FILTER_SPECS.oneEuro,
-  pinch: DEFAULT_PINCH,
+  pinch: saved ?? DEFAULT_PINCH,
+  calibrated: saved !== null,
+  calibrationOpen: false,
+  calibrationOffered: typeof localStorage !== 'undefined' && localStorage.getItem(OFFERED_KEY) !== null,
 
   cameras: [],
   cameraId: null,
@@ -144,6 +169,33 @@ export const useStudioStore = create<StudioState>()(() => ({
   toast: null,
   reducedMotion,
 }));
+
+export function savePinchCalibration(enter: number, exit: number): void {
+  useStudioStore.setState((s) => ({ pinch: { ...s.pinch, enter, exit }, calibrated: true }));
+  try {
+    localStorage.setItem(PINCH_KEY, JSON.stringify({ enter, exit }));
+  } catch {
+    // Not persisted; still applies for this session.
+  }
+}
+
+export function resetPinchCalibration(): void {
+  useStudioStore.setState({ pinch: DEFAULT_PINCH, calibrated: false });
+  try {
+    localStorage.removeItem(PINCH_KEY);
+  } catch {
+    // Nothing stored.
+  }
+}
+
+export function markCalibrationOffered(): void {
+  useStudioStore.setState({ calibrationOffered: true });
+  try {
+    localStorage.setItem(OFFERED_KEY, '1');
+  } catch {
+    // Offer again next time.
+  }
+}
 
 let toastId = 0;
 export function showToast(text: string): void {

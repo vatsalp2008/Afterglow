@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Studio } from '../studio/studio';
 import styles from './App.module.css';
+import { CalibrationOffer, CalibrationPanel } from './Calibration';
 import { Dock } from './Dock';
 import { FixtureCapture } from './FixtureCapture';
 import { Hud } from './Hud';
@@ -22,6 +23,9 @@ export function App() {
   // null until mounted; false if the renderer couldn't start (no WebGL2).
   const [studio, setStudio] = useState<Studio | false | null>(null);
   const phase = useStudioStore((s) => s.phase);
+  const inputMode = useStudioStore((s) => s.inputMode);
+  const calibrationOpen = useStudioStore((s) => s.calibrationOpen);
+  const offerCalibration = useStudioStore((s) => !s.calibrated && !s.calibrationOffered);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -60,6 +64,8 @@ export function App() {
           <Hint />
           <Dock studio={studio} />
           <Hud studio={studio} />
+          {inputMode === 'camera' && calibrationOpen && <CalibrationPanel studio={studio} />}
+          {inputMode === 'camera' && !calibrationOpen && offerCalibration && <CalibrationOffer />}
           {params.get('record') === 'fixtures' && <FixtureCapture studio={studio} />}
           {params.get('bench') === 'tracker' && <TrackerBench studio={studio} />}
         </>

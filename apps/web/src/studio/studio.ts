@@ -117,6 +117,8 @@ export class Studio {
   private session = new SessionCapture();
   private bench: BenchCollector | null = null;
   private benchRunning = false;
+  private measureSink: number[] | null = null;
+  private calibrating = false;
   private clearArmedUntil = 0;
   private pointerActive = false;
 
@@ -431,6 +433,26 @@ export class Studio {
     showToast(`Saved ${fileName} (${String(recording.frames.length)} frames)`);
   }
 
+  /**
+   * Collects the pinch measure of the first visible hand for `durationMs`, for
+   * calibration. Drawing is suppressed meanwhile, so the calibration pinch doesn't paint.
+   */
+  async sampleMeasures(durationMs: number): Promise<number[]> {
+    const sink: number[] = [];
+    this.measureSink = sink;
+    this.calibrating = true;
+    this.finishTrackedStrokes();
+    await sleep(durationMs);
+    if (this.measureSink === sink) this.measureSink = null;
+    return sink;
+  }
+
+  endCalibration(): void {
+    this.measureSink = null;
+    this.calibrating = false;
+    this.finishTrackedStrokes();
+  }
+
   cancelSession(): void {
     this.session.cancel();
     useStudioStore.setState({ session: null });
@@ -524,6 +546,11 @@ export class Studio {
     this.handleEvents(this.pinch.update(filtered, aspect));
 
     const tracked = this.pinch.status();
+    const first = filtered.hands[0];
+    if (this.measureSink && first) {
+      const ratio = tracked.get(first.key)?.ratio;
+      if (ratio !== undefined && Number.isFinite(ratio)) this.measureSink.push(ratio);
+    }
     for (const key of this.pens.keys()) if (key !== POINTER_KEY && !tracked.has(key)) this.pens.delete(key);
   };
 
@@ -550,7 +577,7 @@ export class Studio {
       } else {
         this.pens.set(ev.handKey, { p: ev.p, state: ev.type === 'hover' ? 'hover' : 'drawing', color: style.color });
       }
-      if (this.replay || this.mode !== 'studio') continue;
+      if (this.replay || this.calibrating || this.mode !== 'studio') continue;
       this.applyBuild(this.builder.handle(ev, style, this.frame));
     }
   }
