@@ -105,4 +105,18 @@ export const SCENARIOS: readonly Scenario[] = [
       'Pinch and draw slowly while rotating your wrist, so your palm turns sideways and then down. Keep pinching the whole time.',
     durationMs: 12_000,
   },
+  {
+    id: '16-open-palm-2',
+    title: 'Open palm, again',
+    instruction:
+      'Hold an open palm to the camera, fingers spread, for 2 seconds, then drop your hand out of view for a second. Do this 3 times.',
+    durationMs: 12_000,
+  },
+  {
+    id: '17-swipes-2',
+    title: 'Two-finger swipes, again',
+    instruction:
+      'Hold up two fingers (index and middle). Swipe left and bring your hand straight back, then wait a second. Do this 3 times, then the same 3 times to the right.',
+    durationMs: 16_000,
+  },
 ];
