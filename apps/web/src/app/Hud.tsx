@@ -3,6 +3,7 @@ import { CloseIcon, Panel } from '@afterglow/ui';
 import { useShallow } from 'zustand/react/shallow';
 import type { Studio } from '../studio/studio';
 import type { HandStat } from './store';
+import { Field, FilterControls, Slider } from './Controls';
 import styles from './Hud.module.css';
 import { useStudioStore } from './store';
 
@@ -41,34 +42,6 @@ function PinchBar({ hand, enter, exit }: { hand: HandStat; enter: number; exit: 
   );
 }
 
-interface SliderProps {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  onChange: (v: number) => void;
-}
-
-function Slider({ label, value, min, max, step, onChange }: SliderProps) {
-  return (
-    <label className={styles.slider}>
-      <span className={styles.sliderHead}>
-        <span>{label}</span>
-        <span>{value.toFixed(step < 0.1 ? 2 : 1)}</span>
-      </span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-      />
-    </label>
-  );
-}
-
 const TRACKER_LABELS = { worker: 'worker', main: 'main thread', fixture: 'recorded session' } as const;
 
 export function Hud({ studio }: { studio: Studio }) {
@@ -79,7 +52,7 @@ export function Hud({ studio }: { studio: Studio }) {
       inputMode: st.inputMode,
       strokeCount: st.strokeCount,
       pinch: st.pinch,
-      oneEuro: st.oneEuro,
+      filter: st.filter,
       showSkeleton: st.showSkeleton,
       showRaw: st.showRaw,
       debugView: st.debugView,
@@ -128,8 +101,7 @@ export function Hud({ studio }: { studio: Studio }) {
       {camera && (
         <section className={styles.section}>
           <h3>Camera</h3>
-          <label className={styles.field}>
-            <span>Device</span>
+          <Field label="Device">
             <select
               value={s.cameraId ?? ''}
               onChange={(e) => {
@@ -143,9 +115,8 @@ export function Hud({ studio }: { studio: Studio }) {
                 </option>
               ))}
             </select>
-          </label>
-          <label className={styles.field}>
-            <span>Resolution</span>
+          </Field>
+          <Field label="Resolution">
             <select
               value={s.resolution}
               onChange={(e) => {
@@ -160,7 +131,7 @@ export function Hud({ studio }: { studio: Studio }) {
                 </option>
               ))}
             </select>
-          </label>
+          </Field>
         </section>
       )}
 
@@ -191,23 +162,8 @@ export function Hud({ studio }: { studio: Studio }) {
           </section>
 
           <section className={styles.section}>
-            <h3>One Euro filter</h3>
-            <Slider
-              label="Min cutoff (Hz)"
-              value={s.oneEuro.minCutoff}
-              min={0.1}
-              max={5}
-              step={0.1}
-              onChange={(v) => set({ oneEuro: { ...s.oneEuro, minCutoff: v } })}
-            />
-            <Slider
-              label="Beta"
-              value={s.oneEuro.beta}
-              min={0}
-              max={40}
-              step={0.5}
-              onChange={(v) => set({ oneEuro: { ...s.oneEuro, beta: v } })}
-            />
+            <h3>Smoothing</h3>
+            <FilterControls spec={s.filter} onChange={(filter) => set({ filter })} />
             <label className={styles.check}>
               <input type="checkbox" checked={s.debugView} onChange={(e) => set({ debugView: e.target.checked })} />
               Debug view: natural video, skeleton, and raw signal

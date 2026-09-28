@@ -3,10 +3,10 @@
 
 import { create } from 'zustand';
 import {
-  DEFAULT_ONE_EURO,
+  DEFAULT_FILTER_SPECS,
   DEFAULT_PINCH,
   type BrushId,
-  type OneEuroParams,
+  type FilterSpec,
   type PenState,
   type PinchConfig,
   type TrackerDelegate,
@@ -70,7 +70,7 @@ export interface StudioState {
   showRaw: boolean;
   /** Natural video with the skeleton and raw signal: for checking tracking. */
   debugView: boolean;
-  oneEuro: OneEuroParams;
+  filter: FilterSpec;
   pinch: PinchConfig;
 
   cameras: CameraDevice[];
@@ -109,7 +109,7 @@ export const useStudioStore = create<StudioState>()(() => ({
   showSkeleton: false,
   showRaw: false,
   debugView: false,
-  oneEuro: DEFAULT_ONE_EURO,
+  filter: DEFAULT_FILTER_SPECS.oneEuro,
   pinch: DEFAULT_PINCH,
 
   cameras: [],

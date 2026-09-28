@@ -91,7 +91,7 @@ export class Studio {
   private renderer: LightRenderer;
   private history = new History();
   private builder = new StrokeBuilder(newId);
-  private filter = new LandmarkFilter(useStudioStore.getState().oneEuro);
+  private filter = new LandmarkFilter(useStudioStore.getState().filter);
   private pinch = new PinchTracker(useStudioStore.getState().pinch);
   private tracker: HandTracker | null = null;
   private stream: MediaStream | null = null;
@@ -792,7 +792,7 @@ export class Studio {
     if (s.darkroom !== prev.darkroom || s.debugView !== prev.debugView) {
       this.renderer.setDarkroom(this.view().darkroom ? 1 : 0);
     }
-    if (s.oneEuro !== prev.oneEuro) this.filter.setParams(s.oneEuro);
+    if (s.filter !== prev.filter) this.filter.setSpec(s.filter);
     if (s.pinch !== prev.pinch) this.pinch.config = s.pinch;
     if (s.showSkeleton !== prev.showSkeleton || s.debugView !== prev.debugView) this.overlayDirty = true;
   };

@@ -129,43 +129,6 @@
   font-size: 12px;
 }
 
-.slider {
-  display: block;
-  margin: 10px 0;
-}
-
-.sliderHead {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 4px;
-  color: var(--fog);
-}
-
-.slider input {
-  width: 100%;
-  accent-color: var(--tungsten);
-}
-
-.field {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 8px 0;
-  color: var(--fog);
-}
-
-.field select {
-  min-width: 0;
-  max-width: 170px;
-  padding: 4px 6px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--night-deep);
-  color: var(--paper);
-  font: inherit;
-}
-
 .check {
   display: flex;
   align-items: center;
