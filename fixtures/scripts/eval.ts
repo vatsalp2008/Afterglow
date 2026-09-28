@@ -34,6 +34,16 @@ export interface Summary {
   releaseMs: number | null;
 }
 
+/**
+ * How far a fixture's stroke count is off. A right count whose strokes cover less than half
+ * the pinched time still counts as wrong: one short stroke is not the stroke the user drew.
+ */
+function strokeError(s: FixtureScore): number {
+  if (s.expectedStrokes === null) return 0;
+  const off = Math.abs(s.strokes - s.expectedStrokes);
+  return s.penState && s.expectedStrokes > 0 && s.penState.recall < 0.5 ? Math.max(off, 1) : off;
+}
+
 function scoreAll(config: PipelineConfig): { scores: FixtureScore[]; summary: Summary } {
   const scores = [...fixtures].map(([name, rec]) => scoreFixture(name, replaySession(rec, config), labels[name]!));
   const labeled = scores.filter((s) => s.penState);
@@ -41,10 +51,7 @@ function scoreAll(config: PipelineConfig): { scores: FixtureScore[]; summary: Su
   return {
     scores,
     summary: {
-      strokeError: scores.reduce(
-        (sum, s) => sum + (s.expectedStrokes === null ? 0 : Math.abs(s.strokes - s.expectedStrokes)),
-        0,
-      ),
+      strokeError: scores.reduce((sum, s) => sum + strokeError(s), 0),
       handErrors: scores.filter((s) => s.expectedHands !== null && s.hands !== s.expectedHands).length,
       meanF1: labeled.reduce((sum, s) => sum + s.penState!.f1, 0) / labeled.length,
       minRecall: Math.min(...labeled.map((s) => s.penState!.recall)),
@@ -142,14 +149,22 @@ function tune(): void {
     console.log(JSON.stringify(results.slice(0, 25), null, 2));
     return;
   }
-  console.log(`${String(grid.length)} configurations, best first (stable = neighbors with equally few errors)\n`);
-  console.log('segment  enter  exit  release     rejoin  errors  mean F1  min recall  pen-up  stable');
-  for (const { pinch, summary } of results.slice(0, 20)) {
+  const errors = (s: Summary) => s.strokeError + s.handErrors * 10;
+  const row = ({ pinch, summary }: { pinch: PinchConfig; summary: Summary }) => {
     const release = pinch.exitMs > 0 ? `${String(pinch.exitMs)}ms` : `${String(pinch.exitFrames)} frames`;
     console.log(
-      `${String(pinch.segmentWeight).padStart(7)}  ${pinch.enter.toFixed(2)}  ${pinch.exit.toFixed(2)}  ${release.padEnd(10)}  ${String(pinch.rejoinMs).padStart(6)}  ${String(summary.strokeError + summary.handErrors * 10).padStart(6)}  ${summary.meanF1.toFixed(3).padStart(7)}  ${summary.minRecall.toFixed(2).padStart(10)}  ${ms(summary.releaseMs)}  ${stability(pinch, summary).padStart(6)}`,
+      `${String(pinch.segmentWeight).padStart(7)}  ${pinch.enter.toFixed(2)}  ${pinch.exit.toFixed(2)}  ${release.padEnd(10)}  ${String(pinch.rejoinMs).padStart(6)}  ${String(errors(summary)).padStart(6)}  ${summary.meanF1.toFixed(3).padStart(7)}  ${summary.minRecall.toFixed(2).padStart(10)}  ${ms(summary.releaseMs)}  ${stability(pinch, summary).padStart(6)}`,
     );
-  }
+  };
+  const header = 'segment  enter  exit  release     rejoin  errors  mean F1  min recall  pen-up  stable';
+  console.log(`${String(grid.length)} configurations, best first (stable = neighbors with equally few errors)\n`);
+  console.log(header);
+  results.slice(0, 20).forEach(row);
+  // Fewer errors and more pen-down coverage pull against each other: a later pen-down breaks
+  // fewer strokes but draws less. The front is every configuration nothing beats on both.
+  const front = results.filter((r, i) => results.slice(0, i).every((q) => q.summary.meanF1 < r.summary.meanF1));
+  console.log(`\nTradeoff front: each row has the best mean F1 for its error count\n\n${header}`);
+  front.forEach(row);
   const legacy = {
     ...DEFAULT_PIPELINE.pinch,
     segmentWeight: 0,
@@ -158,11 +173,17 @@ function tune(): void {
     exitFrames: 2,
     exitMs: 0,
     rejoinMs: 0,
+    fistBelow: 0,
   };
-  const base = scoreAll({ ...DEFAULT_PIPELINE, pinch: legacy }).summary;
-  console.log(
-    `\nPhase 1 settings (tip only, 0.25/0.35, 2 frames): errors ${String(base.strokeError + base.handErrors * 10)}, mean F1 ${base.meanF1.toFixed(3)}, min recall ${base.minRecall.toFixed(2)}`,
-  );
+  for (const [label, pinch] of [
+    ['Defaults', DEFAULT_PIPELINE.pinch],
+    ['Phase 1 settings (tip only, 0.25/0.35, 2 frames)', legacy],
+  ] as const) {
+    const s = scoreAll({ ...DEFAULT_PIPELINE, pinch }).summary;
+    console.log(
+      `\n${label}: errors ${String(errors(s))}, mean F1 ${s.meanF1.toFixed(3)}, min recall ${s.minRecall.toFixed(2)}`,
+    );
+  }
 }
 
 function filters(): void {
