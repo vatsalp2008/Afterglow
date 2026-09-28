@@ -1,5 +1,13 @@
 // Ground truth for the recorded fixtures (fixtures/labels.json).
 
+import type { ToolGesture } from '../types.ts';
+
+/** A tool gesture the person made, expected to be detected within `at` (ms). */
+export interface ExpectedGesture {
+  name: ToolGesture;
+  at: [number, number];
+}
+
 export interface FixtureLabel {
   /** Expected number of strokes, or null when the count isn't exactly defined. */
   strokes: number | null;
@@ -9,11 +17,18 @@ export interface FixtureLabel {
   pinched: Array<[number, number]> | null;
   /** An interval where the hand is held still, for measuring stationary jitter. */
   still?: [number, number];
+  /**
+   * The tool gestures made, in order; anything else detected is a false trigger. [] means
+   * none were made. Absent or null when it isn't known which gestures were meant.
+   */
+  gestures?: ExpectedGesture[] | null;
   /** How the label was derived. */
   source: string;
 }
 
 export type FixtureLabels = Record<string, FixtureLabel>;
+
+const TOOL_GESTURES: readonly ToolGesture[] = ['openMenu', 'pause', 'undo', 'redo', 'refine'];
 
 export class LabelFormatError extends Error {
   override name = 'LabelFormatError';
@@ -56,6 +71,30 @@ export function parseLabels(raw: unknown): FixtureLabels {
         fail(`${name}.still`, 'a [start, end] pair');
       }
       label.still = [still[0], still[1]];
+    }
+    const gestures = v['gestures'];
+    if (gestures !== undefined && gestures !== null) {
+      if (!Array.isArray(gestures)) fail(`${name}.gestures`, 'an array or null');
+      label.gestures = gestures.map((g: unknown, i): ExpectedGesture => {
+        const path = `${name}.gestures[${String(i)}]`;
+        if (typeof g !== 'object' || g === null) fail(path, 'an object');
+        const { name: gesture, at } = g as Record<string, unknown>;
+        if (typeof gesture !== 'string' || !TOOL_GESTURES.includes(gesture as ToolGesture)) {
+          fail(`${path}.name`, TOOL_GESTURES.join(' | '));
+        }
+        if (
+          !Array.isArray(at) ||
+          at.length !== 2 ||
+          typeof at[0] !== 'number' ||
+          typeof at[1] !== 'number' ||
+          at[0] > at[1]
+        ) {
+          fail(`${path}.at`, 'a [start, end] pair');
+        }
+        return { name: gesture as ToolGesture, at: [at[0], at[1]] };
+      });
+    } else if (gestures === null) {
+      label.gestures = null;
     }
     out[name] = label;
   }

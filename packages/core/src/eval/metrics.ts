@@ -1,6 +1,7 @@
 // Metrics for scoring a replay against ground truth, and for comparing filters.
 
-import type { FixtureLabel } from './labels.ts';
+import type { ToolGesture } from '../types.ts';
+import type { ExpectedGesture, FixtureLabel } from './labels.ts';
 import type { Replay } from './pipeline.ts';
 
 export interface PenStateScore {
@@ -64,6 +65,39 @@ export function median(xs: readonly number[]): number | null {
   return s.length % 2 ? s[mid]! : (s[mid - 1]! + s[mid]!) / 2;
 }
 
+export interface DetectedGesture {
+  name: ToolGesture;
+  t: number;
+}
+
+export interface GestureScore {
+  detected: DetectedGesture[];
+  expected: number;
+  /** Expected gestures detected within their window. */
+  matched: number;
+  /** Detected gestures that match nothing expected. */
+  falseTriggers: DetectedGesture[];
+}
+
+export function detectedGestures(replay: Replay): DetectedGesture[] {
+  return replay.events.flatMap((e) => (e.type === 'gesture' ? [{ name: e.name, t: e.t }] : []));
+}
+
+/** Matches each expected gesture to the first unmatched detection of the same name inside its window. */
+export function scoreGestures(replay: Replay, expected: readonly ExpectedGesture[]): GestureScore {
+  const detected = detectedGestures(replay);
+  const used = new Set<number>();
+  let matched = 0;
+  for (const g of expected) {
+    const i = detected.findIndex((d, j) => !used.has(j) && d.name === g.name && d.t >= g.at[0] && d.t <= g.at[1]);
+    if (i >= 0) {
+      used.add(i);
+      matched++;
+    }
+  }
+  return { detected, expected: expected.length, matched, falseTriggers: detected.filter((_, j) => !used.has(j)) };
+}
+
 export interface FixtureScore {
   name: string;
   strokes: number;
@@ -76,6 +110,8 @@ export interface FixtureScore {
   releaseMs: number | null;
   /** Extra strokes per minute of pinched time: strokes that break where one was expected. */
   brokenPerMinute: number | null;
+  /** Tool gestures against the labeled ones; null when they aren't labeled. */
+  gestures: GestureScore | null;
 }
 
 export function scoreFixture(name: string, replay: Replay, label: FixtureLabel): FixtureScore {
@@ -92,6 +128,7 @@ export function scoreFixture(name: string, replay: Replay, label: FixtureLabel):
     releaseMs: pinched ? median(releaseLatencies(replay, pinched)) : null,
     brokenPerMinute:
       label.strokes !== null && pinchedMs > 0 ? (Math.max(0, strokes - label.strokes) * 60_000) / pinchedMs : null,
+    gestures: label.gestures ? scoreGestures(replay, label.gestures) : null,
   };
 }
 

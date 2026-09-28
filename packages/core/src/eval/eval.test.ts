@@ -9,6 +9,7 @@ import {
   median,
   releaseLatencies,
   scoreFixture,
+  scoreGestures,
   scorePenState,
   strokeCount,
   type TrackPoint,
@@ -102,6 +103,38 @@ describe('stroke metrics', () => {
   });
 });
 
+describe('scoreGestures', () => {
+  const gesture = (t: number, name: 'undo' | 'redo' | 'pause'): InputEvent => ({
+    type: 'gesture',
+    t,
+    handKey: 'hand-1',
+    name,
+  });
+
+  it('matches expected gestures within their windows and counts the rest as false triggers', () => {
+    const r = replay([], [gesture(100, 'pause'), gesture(900, 'undo'), gesture(950, 'undo'), gesture(2000, 'redo')]);
+    const s = scoreGestures(r, [
+      { name: 'pause', at: [0, 500] },
+      { name: 'undo', at: [800, 1200] },
+      { name: 'redo', at: [800, 1200] },
+    ]);
+    expect(s).toMatchObject({ expected: 3, matched: 2 });
+    expect(s.falseTriggers).toEqual([
+      { name: 'undo', t: 950 },
+      { name: 'redo', t: 2000 },
+    ]);
+  });
+
+  it('scores a fixture only when its gestures are labeled', () => {
+    const r = replay([], [gesture(100, 'pause')]);
+    expect(scoreFixture('x', r, { strokes: 0, pinched: [], gestures: [], source: 'test' }).gestures).toMatchObject({
+      matched: 0,
+      falseTriggers: [{ name: 'pause', t: 100 }],
+    });
+    expect(scoreFixture('y', r, { strokes: 0, pinched: [], gestures: null, source: 'test' }).gestures).toBeNull();
+  });
+});
+
 describe('filter metrics', () => {
   const track = (fn: (t: number) => [number, number]): TrackPoint[] =>
     Array.from({ length: 300 }, (_, i) => {
@@ -138,9 +171,13 @@ describe('parseLabels', () => {
       a: { strokes: 1, pinched: [[0, 10]], source: 'derived' },
       b: { strokes: null, hands: 2, pinched: null, source: 'observed' },
       c: { strokes: 0, pinched: [], still: [100, 900], source: 'still' },
+      d: { strokes: 0, pinched: [], gestures: [{ name: 'pause', at: [0, 900] }], source: 'fist' },
+      e: { strokes: 0, pinched: [], gestures: null, source: 'unknown' },
     });
     expect(labels['b']).toEqual({ strokes: null, hands: 2, pinched: null, source: 'observed' });
     expect(labels['c']?.still).toEqual([100, 900]);
+    expect(labels['d']?.gestures).toEqual([{ name: 'pause', at: [0, 900] }]);
+    expect(labels['e']?.gestures).toBeNull();
   });
 
   it.each([
@@ -149,6 +186,10 @@ describe('parseLabels', () => {
     [{ a: { strokes: 1, pinched: [[5, 1]], source: 's' } }, 'a.pinched[0]'],
     [{ a: { strokes: 1, pinched: null, source: '' } }, 'a.source'],
     [{ a: { strokes: 0, pinched: [], still: [1], source: 's' } }, 'a.still'],
+    [{ a: { strokes: 0, pinched: [], gestures: {}, source: 's' } }, 'a.gestures'],
+    [{ a: { strokes: 0, pinched: [], gestures: [{ name: 'wave', at: [0, 1] }], source: 's' } }, 'a.gestures[0].name'],
+    [{ a: { strokes: 0, pinched: [], gestures: [{ name: 'undo', at: [2, 1] }], source: 's' } }, 'a.gestures[0].at'],
+    [{ a: { strokes: 0, pinched: [], gestures: [3], source: 's' } }, 'a.gestures[0]'],
   ])('rejects %j', (raw, message) => {
     expect(() => parseLabels(raw)).toThrow(LabelFormatError);
     expect(() => parseLabels(raw)).toThrow(message);

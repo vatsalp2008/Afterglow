@@ -1,10 +1,11 @@
 // Replays a recorded session through the same input pipeline the studio runs
-// (identity -> filter -> pinch), so fixtures can be scored offline.
+// (identity -> filter -> pinch -> tool gestures), so fixtures can be scored offline.
 
 import { LandmarkFilter } from '../filters/landmarkFilter.ts';
 import { DEFAULT_FILTER_SPECS, type FilterSpec } from '../filters/spec.ts';
 import { DEFAULT_IDENTITY, HandIdentity, type IdentityConfig } from '../gesture/handIdentity.ts';
 import { DEFAULT_PINCH, penSample, PinchTracker, type PinchConfig } from '../gesture/pinch.ts';
+import { DEFAULT_TOOL_GESTURES, ToolGestureTracker, type ToolGestureConfig } from '../gesture/tools.ts';
 import type { SessionRecording } from '../session.ts';
 import type { InputEvent, PenSample } from '../types.ts';
 
@@ -13,12 +14,14 @@ export interface PipelineConfig {
   identity: IdentityConfig | null;
   filter: FilterSpec;
   pinch: PinchConfig;
+  tools: ToolGestureConfig;
 }
 
 export const DEFAULT_PIPELINE: PipelineConfig = {
   identity: DEFAULT_IDENTITY,
   filter: DEFAULT_FILTER_SPECS.oneEuro,
   pinch: DEFAULT_PINCH,
+  tools: DEFAULT_TOOL_GESTURES,
 };
 
 export interface ReplayHand {
@@ -46,12 +49,14 @@ export function replaySession(rec: SessionRecording, config: PipelineConfig = DE
   const identity = config.identity ? new HandIdentity(config.identity) : null;
   const filter = new LandmarkFilter(config.filter);
   const pinch = new PinchTracker(config.pinch);
+  const tools = new ToolGestureTracker(config.tools);
   const events: InputEvent[] = [];
   const frames: ReplayFrame[] = [];
   for (const frame of rec.frames) {
     const filtered = filter.apply(identity ? identity.assign(frame, aspect) : frame);
     events.push(...pinch.update(filtered, aspect));
     const status = pinch.status();
+    events.push(...tools.update(filtered, aspect, status));
     frames.push({
       t: frame.captureTime,
       drawing: [...status.values()].some((s) => s.state === 'drawing'),
