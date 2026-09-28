@@ -34,24 +34,30 @@ export interface PinchConfig {
   /** Palm size (wrist to middle knuckle, frame-height units) that maps to depth 1. */
   neutralPalm: number;
   /**
-   * Weight of the thumb-to-index-segment distance in the pinch measure. 0 measures
+   * Weight of the thumb-to-fingertip-segment distance in the pinch measure. 0 measures
    * fingertip to fingertip only; see pinchMeasure.
    */
   segmentWeight: number;
+  /**
+   * A hand whose middle, ring, and little fingers are all curled below this extension
+   * is a fist, not a pinch (0 disables); see fingerExtension.
+   */
+  fistBelow: number;
 }
 
-// Tuned on the recorded fixtures with the evaluation harness (ADR 0005): the middle
-// of the region where the clean fixtures have no stroke errors, preferring coverage.
+// Tuned on the recorded fixtures with the evaluation harness (ADR 0005). The release is
+// timed, not counted: the recordings run at 19 to 30 fps.
 export const DEFAULT_PINCH: PinchConfig = {
   enter: 0.24,
   exit: 0.38,
   enterFrames: 2,
-  exitFrames: 3,
-  exitMs: 0,
+  exitFrames: 2,
+  exitMs: 100,
   rejoinMs: 250,
   lossGraceFrames: 4,
   neutralPalm: 0.18,
   segmentWeight: 1.2,
+  fistBelow: 1.4,
 };
 
 // ---- measures --------------------------------------------------------------
@@ -83,19 +89,38 @@ export function pinchRatio(landmarks: readonly Vec3[], aspect: number): number {
 
 /**
  * The pinch measure: the smaller of the fingertip ratio and `segmentWeight` × the
- * thumb tip's distance to the index finger's last two segments (both relative to
- * palm length). A thumb pressed against the side of the index finger reads as
- * pinched even when the two tips are apart, which is common in low light and
- * when the hand is rotated (fixtures 07 and 08).
+ * thumb tip's distance to the index finger's last segment, the fingertip pad (both
+ * relative to palm length). A thumb pressed against the pad reads as pinched even
+ * when the two tip landmarks sit apart.
+ *
+ * Only the last segment counts. The middle segment also caught more low-light
+ * pinches (fixture 07), but a relaxed hand rests its thumb there, and it drew for
+ * 7.7 seconds on fixture 09 (ADR 0005).
  */
 export function pinchMeasure(landmarks: readonly Vec3[], aspect: number, segmentWeight: number): number {
   const tip = pinchRatio(landmarks, aspect);
   if (segmentWeight <= 0 || !Number.isFinite(tip)) return tip;
   const u = (i: number) => toUnits(landmarks[i]!, aspect);
   const palm = dist(u(LM.wrist), u(LM.middleMcp));
-  const thumb = u(LM.thumbTip);
-  const segment = Math.min(distToSegment(thumb, u(6), u(7)), distToSegment(thumb, u(7), u(LM.indexTip))) / palm;
+  const segment = distToSegment(u(LM.thumbTip), u(7), u(LM.indexTip)) / palm;
   return Math.min(tip, segmentWeight * segment);
+}
+
+/**
+ * How extended the least-curled of the middle, ring, and little fingers is: tip-to-wrist
+ * over knuckle-to-wrist. Extended fingers read about 1.8 to 2.4; a fist, about 0.7 to 1.3.
+ * In a fist the thumb genuinely presses on the index finger, so pinch measures read
+ * closed; this tells the two apart (fixture 11).
+ */
+export function fingerExtension(landmarks: readonly Vec3[], aspect: number): number {
+  const u = (i: number) => toUnits(landmarks[i]!, aspect);
+  const wrist = u(LM.wrist);
+  const fingers: Array<[number, number]> = [
+    [12, 9],
+    [16, 13],
+    [20, 17],
+  ];
+  return Math.max(...fingers.map(([tip, knuckle]) => dist(u(tip), wrist) / Math.max(dist(u(knuckle), wrist), 1e-6)));
 }
 
 /** Apparent palm length in frame-height units: a proxy for distance to the camera. */
@@ -209,12 +234,15 @@ interface HandPen {
   since: number;
   missing: number;
   ratio: number;
+  fist: boolean;
   held: Array<{ t: number; p: PenSample }>;
 }
 
 export interface PenStatus {
   state: PenState;
   ratio: number;
+  /** The hand is a fist, which never counts as a pinch. */
+  fist: boolean;
 }
 
 export class PinchTracker {
@@ -229,21 +257,23 @@ export class PinchTracker {
   update(frame: HandFrame, aspect: number): InputEvent[] {
     const events: InputEvent[] = [];
     const t = frame.captureTime;
-    const { enter, exit, neutralPalm, segmentWeight } = this.config;
+    const { enter, exit, neutralPalm, segmentWeight, fistBelow } = this.config;
     const seen = new Set<HandKey>();
 
     for (const hand of frame.hands) {
       seen.add(hand.key);
       const ratio = pinchMeasure(hand.landmarks, aspect, segmentWeight);
+      const fist = fistBelow > 0 && fingerExtension(hand.landmarks, aspect) < fistBelow;
       const p = penSample(hand.landmarks, aspect, neutralPalm);
       let h = this.hands.get(hand.key);
       if (!h) {
-        h = { state: 'hover', run: 0, since: t, missing: 0, ratio, held: [] };
+        h = { state: 'hover', run: 0, since: t, missing: 0, ratio, fist, held: [] };
         this.hands.set(hand.key, h);
       }
       h.missing = 0;
       h.ratio = ratio;
-      const input: PenInput = ratio < enter ? 'closed' : ratio > exit ? 'open' : 'between';
+      h.fist = fist;
+      const input: PenInput = fist || ratio > exit ? 'open' : ratio < enter ? 'closed' : 'between';
       this.step(hand.key, h, input, t, p, events);
     }
 
@@ -259,7 +289,7 @@ export class PinchTracker {
     const out = new Map<HandKey, PenStatus>();
     for (const [key, h] of this.hands) {
       const state: PenState = h.state === 'drawing' || h.state === 'releasing' ? 'drawing' : 'hover';
-      out.set(key, { state, ratio: h.ratio });
+      out.set(key, { state, ratio: h.ratio, fist: h.fist });
     }
     return out;
   }

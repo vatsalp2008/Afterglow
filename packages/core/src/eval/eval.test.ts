@@ -161,6 +161,7 @@ describe('replaySession', () => {
   lm[0] = { x: 0.5, y: 0.7, z: 0 };
   lm[4] = { x: 0.49, y: 0.4, z: 0 };
   lm[8] = { x: 0.51, y: 0.4, z: 0 };
+  for (const tip of [12, 16, 20]) lm[tip] = { x: 0.5, y: 0.3, z: 0 }; // extended: not a fist
   const rec: SessionRecording = {
     version: 1,
     meta: {

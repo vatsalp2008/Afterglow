@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { HandFrame, InputEvent, Vec3 } from '../types.ts';
 import {
   DEFAULT_PINCH,
+  fingerExtension,
   findTransition,
   PEN_TRANSITIONS,
   penFsmMermaid,
@@ -23,6 +24,14 @@ function hand(r: number): Vec3[] {
   lm[8] = { x: 0.5 + r * 0.1, y: 0.4, z: 0 };
   lm[7] = { x: 0.5 + r * 0.1, y: 0.35, z: 0 };
   lm[6] = { x: 0.5 + r * 0.1, y: 0.3, z: 0 };
+  // Middle, ring, and little fingers extended (twice their knuckle's distance from the wrist): not a fist.
+  for (const tip of [12, 16, 20]) lm[tip] = { x: 0.5, y: 0.3, z: 0 };
+  return lm;
+}
+
+function fist(): Vec3[] {
+  const lm = hand(0.1);
+  for (const tip of [12, 16, 20]) lm[tip] = { x: 0.5, y: 0.55, z: 0 }; // curled back toward the palm
   return lm;
 }
 
@@ -36,6 +45,7 @@ const LEGACY: PinchConfig = {
   exitMs: 0,
   rejoinMs: 0,
   segmentWeight: 0,
+  fistBelow: 1.4,
 };
 
 function run(ratios: Array<number | null>, config: PinchConfig = LEGACY, dt = 33): InputEvent[] {
@@ -61,15 +71,29 @@ describe('pinch measures', () => {
     expect(pinchMeasure(hand(0.3), 1, 1.6)).toBeCloseTo(0.3, 9);
   });
 
-  it('pinchMeasure reads a thumb pressed on the side of the index finger as closed', () => {
+  it('pinchMeasure reads a thumb pressed on the fingertip pad as closed', () => {
     const lm = hand(0.1);
-    // A long last segment, with the thumb pressed against its middle, far from the tip.
-    lm[6] = { x: 0.51, y: 0.15, z: 0 };
-    lm[7] = { x: 0.51, y: 0.25, z: 0 };
-    lm[4] = { x: 0.505, y: 0.25, z: 0 };
+    // A long last segment (7 to 8), with the thumb pressed against its middle, far from the tip.
+    lm[6] = { x: 0.51, y: 0.05, z: 0 };
+    lm[7] = { x: 0.51, y: 0.15, z: 0 };
+    lm[4] = { x: 0.505, y: 0.28, z: 0 };
     expect(pinchRatio(lm, 1)).toBeGreaterThan(0.3);
     expect(pinchMeasure(lm, 1, 1.6)).toBeLessThan(0.1);
     expect(pinchMeasure(lm, 1, 0)).toBeCloseTo(pinchRatio(lm, 1), 9);
+  });
+
+  it('ignores a thumb resting against the middle segment, as in a relaxed hand', () => {
+    const lm = hand(0.6);
+    lm[6] = { x: 0.56, y: 0.2, z: 0 };
+    lm[7] = { x: 0.56, y: 0.3, z: 0 };
+    lm[8] = { x: 0.56, y: 0.35, z: 0 };
+    lm[4] = { x: 0.555, y: 0.22, z: 0 }; // against the middle segment (6 to 7), not the pad
+    expect(pinchMeasure(lm, 1, 1.2)).toBeGreaterThan(0.4);
+  });
+
+  it('fingerExtension tells an open hand from a fist', () => {
+    expect(fingerExtension(hand(0.3), 1)).toBeCloseTo(2, 9);
+    expect(fingerExtension(fist(), 1)).toBeLessThan(1.4);
   });
 
   it('is infinite for a degenerate palm', () => {
@@ -161,6 +185,41 @@ describe('PinchTracker', () => {
     expect(types(run([0.2], { ...LEGACY, enterFrames: 1 }))).toEqual(['strokeStart']);
   });
 
+  it('never starts a stroke from a fist, and reports it', () => {
+    const tracker = new PinchTracker(LEGACY);
+    const evs = [0, 1, 2, 3].flatMap((i) =>
+      tracker.update(
+        { frameId: i, captureTime: i * 33, hands: [{ key: 'R', handedness: 'Right', score: 1, landmarks: fist() }] },
+        1,
+      ),
+    );
+    expect(evs.filter((e) => e.type === 'strokeStart')).toHaveLength(0);
+    expect(tracker.status().get('R')).toMatchObject({ state: 'hover', fist: true });
+  });
+
+  it('ends a stroke when the hand closes into a fist', () => {
+    const tracker = new PinchTracker(LEGACY);
+    const frames = [hand(0.1), hand(0.1), fist(), fist()];
+    const evs = frames.flatMap((lm, i) =>
+      tracker.update(
+        { frameId: i, captureTime: i * 33, hands: [{ key: 'R', handedness: 'Right', score: 1, landmarks: lm }] },
+        1,
+      ),
+    );
+    expect(evs.filter((e) => e.type === 'strokeEnd')).toEqual([expect.objectContaining({ reason: 'release' })]);
+  });
+
+  it('lets a fist pinch when the gate is disabled', () => {
+    const tracker = new PinchTracker({ ...LEGACY, fistBelow: 0 });
+    const evs = [0, 1].flatMap((i) =>
+      tracker.update(
+        { frameId: i, captureTime: i * 33, hands: [{ key: 'R', handedness: 'Right', score: 1, landmarks: fist() }] },
+        1,
+      ),
+    );
+    expect(evs.filter((e) => e.type === 'strokeStart')).toHaveLength(1);
+  });
+
   it('bridges short hand dropouts without breaking the stroke', () => {
     const evs = run([0.2, 0.2, null, null, null, 0.2]);
     expect(types(evs)).toEqual(['hover', 'strokeStart', 'strokeMove']);
@@ -195,7 +254,7 @@ describe('PinchTracker', () => {
       1,
     );
     expect(first).toMatchObject({ type: 'hover', p: { x: 0.5, y: 0.4 } });
-    expect(tracker.status().get('R')).toMatchObject({ state: 'hover', ratio: 1 });
+    expect(tracker.status().get('R')).toMatchObject({ state: 'hover', ratio: 1, fist: false });
   });
 
   it('ends open strokes on reset', () => {
