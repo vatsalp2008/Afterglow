@@ -45,14 +45,17 @@ export function CalibrationPanel({ studio }: { studio: Studio }) {
     const measure = async (kind: 'open' | 'pinch') => {
       setStep({ kind, sampling: false });
       await sleep(SETTLE_MS);
-      if (isCancelled()) return [];
+      if (isCancelled()) return { measures: [], extensions: [] };
       setStep({ kind, sampling: true });
       return studio.sampleMeasures(SAMPLE_MS);
     };
     const open = await measure('open');
     const pinched = await measure('pinch');
     studio.endCalibration();
-    if (!isCancelled()) setStep({ kind: 'result', calibration: calibratePinch(open, pinched) });
+    if (!isCancelled()) {
+      const calibration = calibratePinch(open.measures, pinched.measures, pinched.extensions);
+      setStep({ kind: 'result', calibration });
+    }
   };
 
   return (
@@ -90,13 +93,13 @@ export function CalibrationPanel({ studio }: { studio: Studio }) {
                 Your pinch reads {step.calibration.result.pinchedLevel.toFixed(2)} and your open hand{' '}
                 {step.calibration.result.openLevel.toFixed(2)}. The pen will go down below{' '}
                 {step.calibration.result.enter.toFixed(2)} and lift above {step.calibration.result.exit.toFixed(2)}.
+                {step.calibration.result.fistBelow === 0 &&
+                  ' Your pinch curls your other fingers like a fist, so a fist won’t pause drawing.'}
               </p>
               <div className={styles.actions}>
                 <Button
                   onClick={() => {
-                    if (step.calibration.ok) {
-                      savePinchCalibration(step.calibration.result.enter, step.calibration.result.exit);
-                    }
+                    if (step.calibration.ok) savePinchCalibration(step.calibration.result);
                     close();
                   }}
                 >

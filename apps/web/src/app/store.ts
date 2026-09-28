@@ -6,6 +6,7 @@ import {
   DEFAULT_FILTER_SPECS,
   DEFAULT_PINCH,
   type BrushId,
+  type CalibrationResult,
   type FilterSpec,
   type PenState,
   type PinchConfig,
@@ -59,9 +60,15 @@ const OFFERED_KEY = 'afterglow:calibration-offered';
 /** Pinch thresholds from a saved calibration, if any. */
 function savedPinch(): PinchConfig | null {
   try {
-    const raw = JSON.parse(localStorage.getItem(PINCH_KEY) ?? 'null') as { enter?: unknown; exit?: unknown } | null;
+    const raw = JSON.parse(localStorage.getItem(PINCH_KEY) ?? 'null') as {
+      enter?: unknown;
+      exit?: unknown;
+      fistBelow?: unknown;
+    } | null;
     if (typeof raw?.enter === 'number' && typeof raw.exit === 'number' && raw.exit > raw.enter) {
-      return { ...DEFAULT_PINCH, enter: raw.enter, exit: raw.exit };
+      // Calibrations saved before the fist gate existed keep the default gate.
+      const fistBelow = typeof raw.fistBelow === 'number' ? raw.fistBelow : DEFAULT_PINCH.fistBelow;
+      return { ...DEFAULT_PINCH, enter: raw.enter, exit: raw.exit, fistBelow };
     }
   } catch {
     // Storage unavailable or corrupt: fall back to the tuned defaults.
@@ -170,10 +177,10 @@ export const useStudioStore = create<StudioState>()(() => ({
   reducedMotion,
 }));
 
-export function savePinchCalibration(enter: number, exit: number): void {
-  useStudioStore.setState((s) => ({ pinch: { ...s.pinch, enter, exit }, calibrated: true }));
+export function savePinchCalibration({ enter, exit, fistBelow }: CalibrationResult): void {
+  useStudioStore.setState((s) => ({ pinch: { ...s.pinch, enter, exit, fistBelow }, calibrated: true }));
   try {
-    localStorage.setItem(PINCH_KEY, JSON.stringify({ enter, exit }));
+    localStorage.setItem(PINCH_KEY, JSON.stringify({ enter, exit, fistBelow }));
   } catch {
     // Not persisted; still applies for this session.
   }

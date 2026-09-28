@@ -8,6 +8,7 @@ import {
   canvasToScreen,
   canvasToView,
   coverFit,
+  fingerExtension,
   frameForAspect,
   HAND_CONNECTIONS,
   HandIdentity,
@@ -74,6 +75,12 @@ interface PenCursor {
   color: string;
 }
 
+/** What calibration measures of the first visible hand, one entry per frame. */
+export interface CalibrationSamples {
+  measures: number[];
+  extensions: number[];
+}
+
 interface Replay {
   timeline: Timeline;
   startedAt: number;
@@ -117,7 +124,7 @@ export class Studio {
   private session = new SessionCapture();
   private bench: BenchCollector | null = null;
   private benchRunning = false;
-  private measureSink: number[] | null = null;
+  private measureSink: CalibrationSamples | null = null;
   private calibrating = false;
   private clearArmedUntil = 0;
   private pointerActive = false;
@@ -434,11 +441,12 @@ export class Studio {
   }
 
   /**
-   * Collects the pinch measure of the first visible hand for `durationMs`, for
-   * calibration. Drawing is suppressed meanwhile, so the calibration pinch doesn't paint.
+   * Collects the pinch measure and finger extension of the first visible hand for
+   * `durationMs`, for calibration. Drawing is suppressed meanwhile, so the calibration
+   * pinch doesn't paint.
    */
-  async sampleMeasures(durationMs: number): Promise<number[]> {
-    const sink: number[] = [];
+  async sampleMeasures(durationMs: number): Promise<CalibrationSamples> {
+    const sink: CalibrationSamples = { measures: [], extensions: [] };
     this.measureSink = sink;
     this.calibrating = true;
     this.finishTrackedStrokes();
@@ -549,7 +557,10 @@ export class Studio {
     const first = filtered.hands[0];
     if (this.measureSink && first) {
       const ratio = tracked.get(first.key)?.ratio;
-      if (ratio !== undefined && Number.isFinite(ratio)) this.measureSink.push(ratio);
+      if (ratio !== undefined && Number.isFinite(ratio)) {
+        this.measureSink.measures.push(ratio);
+        this.measureSink.extensions.push(fingerExtension(first.landmarks, aspect));
+      }
     }
     for (const key of this.pens.keys()) if (key !== POINTER_KEY && !tracked.has(key)) this.pens.delete(key);
   };
