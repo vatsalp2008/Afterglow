@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { calibratePinch, MIN_CALIBRATION_SAMPLES } from './calibration.ts';
+import { DEFAULT_PINCH } from './pinch.ts';
 
 const repeat = (v: number, n = 30) => Array.from({ length: n }, (_, i) => v + (i % 3) * 0.01);
 
@@ -27,6 +28,20 @@ describe('calibratePinch', () => {
     if (!c.ok) throw new Error('expected a calibration');
     expect(c.result.enter).toBe(0.4);
     expect(c.result.exit).toBe(0.6);
+  });
+
+  it('keeps the fist gate for a pinch with the other fingers extended', () => {
+    const c = calibratePinch(repeat(0.8), repeat(0.1), repeat(1.8));
+    if (!c.ok) throw new Error('expected a calibration');
+    expect(c.result.fistBelow).toBe(DEFAULT_PINCH.fistBelow);
+    const unmeasured = calibratePinch(repeat(0.8), repeat(0.1));
+    expect(unmeasured.ok && unmeasured.result.fistBelow).toBe(DEFAULT_PINCH.fistBelow);
+  });
+
+  it('turns the fist gate off for a pinch with the other fingers curled', () => {
+    const c = calibratePinch(repeat(0.8), repeat(0.1), repeat(1.3));
+    if (!c.ok) throw new Error('expected a calibration');
+    expect(c.result.fistBelow).toBe(0);
   });
 
   it('refuses when open and pinched look alike', () => {
