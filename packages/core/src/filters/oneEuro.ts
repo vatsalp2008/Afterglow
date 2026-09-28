@@ -2,6 +2,8 @@
 // An adaptive low-pass filter: heavy smoothing when the signal is slow (kills
 // jitter), light smoothing when it is fast (kills lag).
 
+import type { Filter } from './filter.ts';
+
 export interface OneEuroParams {
   /** Minimum cutoff frequency in Hz. Lower = less jitter at rest, more lag. */
   minCutoff: number;
@@ -18,7 +20,7 @@ function smoothingFactor(cutoffHz: number, dtSec: number): number {
   return 1 / (1 + tau / dtSec);
 }
 
-export class OneEuroFilter {
+export class OneEuroFilter implements Filter {
   private xHat: number | null = null;
   private dxHat = 0;
   private lastT: number | null = null;

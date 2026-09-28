@@ -1,22 +1,27 @@
-// Applies a One Euro filter per landmark per axis, keyed by hand (not array
+// Applies a scalar filter per landmark per axis, keyed by hand (not array
 // index). Filters of a hand that disappears are dropped, so it restarts cleanly
 // instead of sliding in from its last known position.
 
 import type { HandFrame, HandKey, TrackedHand } from '../types.ts';
-import { OneEuroFilter, type OneEuroParams } from './oneEuro.ts';
+import type { Filter } from './filter.ts';
+import { createFilter, type FilterSpec } from './spec.ts';
 
 export class LandmarkFilter {
-  private filters = new Map<HandKey, OneEuroFilter[]>();
+  private spec: FilterSpec;
+  private filters = new Map<HandKey, Filter[]>();
 
-  private params: OneEuroParams;
-
-  constructor(params: OneEuroParams) {
-    this.params = params;
+  constructor(spec: FilterSpec) {
+    this.spec = spec;
   }
 
-  setParams(params: OneEuroParams): void {
-    this.params = params;
-    for (const set of this.filters.values()) for (const f of set) f.params = params;
+  get currentSpec(): FilterSpec {
+    return this.spec;
+  }
+
+  /** Switches filter or parameters. Filter state restarts from the next frame. */
+  setSpec(spec: FilterSpec): void {
+    this.spec = spec;
+    this.filters.clear();
   }
 
   apply(frame: HandFrame): HandFrame {
@@ -24,8 +29,8 @@ export class LandmarkFilter {
     const hands = frame.hands.map((hand): TrackedHand => {
       seen.add(hand.key);
       let set = this.filters.get(hand.key);
-      if (!set || set.length !== hand.landmarks.length * 3) {
-        set = Array.from({ length: hand.landmarks.length * 3 }, () => new OneEuroFilter(this.params));
+      if (set?.length !== hand.landmarks.length * 3) {
+        set = Array.from({ length: hand.landmarks.length * 3 }, () => createFilter(this.spec));
         this.filters.set(hand.key, set);
       }
       const filters = set;
