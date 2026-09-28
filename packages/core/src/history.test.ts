@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { History } from './history';
-import type { Stroke } from './types';
+import { History } from './history.ts';
+import type { Stroke } from './types.ts';
 
 const s = (id: string): Stroke => ({ id, brush: 'neon', color: '#fff', size: 1, points: [], createdAt: 0 });
 const ids = (h: History) => h.strokes.map((x) => x.id);

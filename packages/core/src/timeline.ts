@@ -2,7 +2,7 @@
 // idle gaps are compressed, while strokes drawn at the same time (two hands)
 // stay simultaneous.
 
-import type { Stroke } from './types';
+import type { Stroke } from './types.ts';
 
 export interface TimelineOptions {
   speed: number;

@@ -1,6 +1,6 @@
 // Stroke document with undo/redo via commands.
 
-import type { Stroke } from './types';
+import type { Stroke } from './types.ts';
 
 type Command = { kind: 'add'; stroke: Stroke } | { kind: 'clear'; removed: Stroke[] };
 

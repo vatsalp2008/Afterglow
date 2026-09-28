@@ -2,13 +2,17 @@
 // index). Filters of a hand that disappears are dropped, so it restarts cleanly
 // instead of sliding in from its last known position.
 
-import type { HandFrame, HandKey, TrackedHand } from '../types';
-import { OneEuroFilter, type OneEuroParams } from './oneEuro';
+import type { HandFrame, HandKey, TrackedHand } from '../types.ts';
+import { OneEuroFilter, type OneEuroParams } from './oneEuro.ts';
 
 export class LandmarkFilter {
   private filters = new Map<HandKey, OneEuroFilter[]>();
 
-  constructor(private params: OneEuroParams) {}
+  private params: OneEuroParams;
+
+  constructor(params: OneEuroParams) {
+    this.params = params;
+  }
 
   setParams(params: OneEuroParams): void {
     this.params = params;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { OneEuroFilter } from './oneEuro';
+import { OneEuroFilter } from './oneEuro.ts';
 
 function prng(seed: number): () => number {
   let s = seed >>> 0;

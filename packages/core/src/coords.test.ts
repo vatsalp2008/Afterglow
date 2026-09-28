@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canvasToScreen, coverFit, frameForAspect, landmarkToView, screenToCanvas, visibleCanvasRect } from './coords';
+import { canvasToScreen, coverFit, frameForAspect, landmarkToView, screenToCanvas, visibleCanvasRect } from './coords.ts';
 
 describe('coords', () => {
   it('mirrors x when going from landmark to view space', () => {

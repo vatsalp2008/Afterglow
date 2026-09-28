@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { HandFrame } from '../types';
-import { LandmarkFilter } from './landmarkFilter';
-import { DEFAULT_ONE_EURO } from './oneEuro';
+import type { HandFrame } from '../types.ts';
+import { LandmarkFilter } from './landmarkFilter.ts';
+import { DEFAULT_ONE_EURO } from './oneEuro.ts';
 
 function frame(t: number, hands: Record<string, number>): HandFrame {
   return {

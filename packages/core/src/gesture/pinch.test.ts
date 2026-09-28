@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { HandFrame, InputEvent, Vec3 } from '../types';
-import { PinchTracker, pinchRatio } from './pinch';
+import type { HandFrame, InputEvent, Vec3 } from '../types.ts';
+import { PinchTracker, pinchRatio } from './pinch.ts';
 
 // A hand whose pinch ratio is exactly `r` (aspect 1): palm length 0.2.
 function hand(r: number): Vec3[] {

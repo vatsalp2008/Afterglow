@@ -23,7 +23,11 @@ export class OneEuroFilter {
   private dxHat = 0;
   private lastT: number | null = null;
 
-  constructor(public params: OneEuroParams = DEFAULT_ONE_EURO) {}
+  params: OneEuroParams;
+
+  constructor(params: OneEuroParams = DEFAULT_ONE_EURO) {
+    this.params = params;
+  }
 
   /** @param t time in ms */
   next(value: number, t: number): number {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { parseSessionRecording, SessionFormatError, SessionRecorder, type SessionRecording } from './session';
-import type { HandFrame } from './types';
+import { parseSessionRecording, SessionFormatError, SessionRecorder, type SessionRecording } from './session.ts';
+import type { HandFrame } from './types.ts';
 
 const landmarks = (x: number) => Array.from({ length: 21 }, (_, i) => ({ x: x + i * 1e-7, y: 0.123456789, z: -0.01 }));
 

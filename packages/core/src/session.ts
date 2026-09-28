@@ -2,7 +2,7 @@
 // replay them through the pipeline later. Only landmarks are stored, never
 // images.
 
-import type { HandFrame, Handedness, TrackedHand, Vec3 } from './types';
+import type { HandFrame, Handedness, TrackedHand, Vec3 } from './types.ts';
 
 export type TrackerMode = 'worker' | 'main' | 'fixture';
 export type TrackerDelegate = 'GPU' | 'CPU' | 'none';

@@ -1,7 +1,7 @@
 // Turns InputEvents into Strokes, one open stroke per hand key.
 
-import { viewToCanvas, type FrameSize } from '../coords';
-import type { BrushId, HandKey, InputEvent, PenSample, Stroke, StrokePoint } from '../types';
+import { viewToCanvas, type FrameSize } from '../coords.ts';
+import type { BrushId, HandKey, InputEvent, PenSample, Stroke, StrokePoint } from '../types.ts';
 
 export interface StrokeStyle {
   brush: BrushId;
@@ -26,7 +26,11 @@ function toPoint(p: PenSample, t: number, frame: FrameSize): StrokePoint {
 export class StrokeBuilder {
   private active = new Map<HandKey, Stroke>();
 
-  constructor(private createId: () => string) {}
+  private readonly createId: () => string;
+
+  constructor(createId: () => string) {
+    this.createId = createId;
+  }
 
   handle(ev: InputEvent, style: StrokeStyle, frame: FrameSize): BuildResult {
     switch (ev.type) {

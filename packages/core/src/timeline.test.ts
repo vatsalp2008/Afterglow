@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildTimeline, sampleTimeline } from './timeline';
-import type { Stroke } from './types';
+import { buildTimeline, sampleTimeline } from './timeline.ts';
+import type { Stroke } from './types.ts';
 
 function stroke(id: string, t0: number, t1: number): Stroke {
   return {

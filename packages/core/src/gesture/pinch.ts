@@ -7,9 +7,9 @@
 // Frames where the fingers are already opening (ratio > exit, not yet confirmed)
 // are held back and dropped on release, so strokes don't end with a hook.
 
-import { landmarkToView } from '../coords';
-import { LM } from '../hand';
-import type { HandFrame, HandKey, InputEvent, PenSample, PenState, Vec3 } from '../types';
+import { landmarkToView } from '../coords.ts';
+import { LM } from '../hand.ts';
+import type { HandFrame, HandKey, InputEvent, PenSample, PenState, Vec3 } from '../types.ts';
 
 export interface PinchConfig {
   /** Enter drawing when the pinch ratio drops below this. */
@@ -79,7 +79,11 @@ export interface PenStatus {
 export class PinchTracker {
   private hands = new Map<HandKey, HandPen>();
 
-  constructor(public config: PinchConfig = DEFAULT_PINCH) {}
+  config: PinchConfig;
+
+  constructor(config: PinchConfig = DEFAULT_PINCH) {
+    this.config = config;
+  }
 
   /** Feed one frame of (filtered) hands. `aspect` is frame width / height. */
   update(frame: HandFrame, aspect: number): InputEvent[] {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { InputEvent } from '../types';
-import { MIN_POINT_DISTANCE, StrokeBuilder } from './strokeBuilder';
+import type { InputEvent } from '../types.ts';
+import { MIN_POINT_DISTANCE, StrokeBuilder } from './strokeBuilder.ts';
 
 const frame = { width: 1000, height: 500 };
 const style = { brush: 'neon' as const, color: '#FFB547', size: 10 };

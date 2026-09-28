@@ -3,7 +3,7 @@
 // curve through every sample. Centripetal parameterization (alpha = 0.5) avoids
 // the cusps and self-loops the uniform variant makes on unevenly spaced points.
 
-import type { StrokePoint, Vec2 } from '../types';
+import type { StrokePoint, Vec2 } from '../types.ts';
 
 const EPS = 1e-4;
 

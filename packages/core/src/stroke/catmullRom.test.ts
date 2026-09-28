@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { StrokePoint } from '../types';
-import { densify } from './catmullRom';
+import type { StrokePoint } from '../types.ts';
+import { densify } from './catmullRom.ts';
 
 const pt = (x: number, y: number, t: number): StrokePoint => ({ x, y, depth: 1, t });
 

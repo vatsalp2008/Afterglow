@@ -2,7 +2,10 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     // No DOM types: core must run unchanged in Node, a browser, or a worker.
-    "lib": ["ES2023"]
+    "lib": ["ES2023"],
+    // Only erasable syntax (and explicit .ts imports), so Node can run core directly
+    // with its built-in type stripping (scripts, the realtime server).
+    "erasableSyntaxOnly": true
   },
   "include": ["src", "vitest.config.ts"]
 }

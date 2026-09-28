@@ -7,7 +7,7 @@
 //    window size.
 // 4. Screen space: CSS pixels of the viewport. The frame is cover-fit to it.
 
-import type { Vec2, Vec3 } from './types';
+import type { Vec2, Vec3 } from './types.ts';
 
 export const CANVAS_HEIGHT = 1000;
 
