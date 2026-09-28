@@ -70,6 +70,9 @@ export function useShortcuts(studio: Studio | null): void {
         case 'r':
           studio.toggleSessionRecording();
           break;
+        case 'p':
+          if (s.inputMode !== 'pointer') studio.togglePause();
+          break;
         case 'backspace':
         case 'delete':
           e.preventDefault();

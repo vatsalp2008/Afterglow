@@ -1,3 +1,4 @@
+import type { ToolGesture } from '@afterglow/core';
 import { CAMERA_RESOLUTIONS, type CameraResolution } from '@afterglow/tracking';
 import { CloseIcon, Panel } from '@afterglow/ui';
 import { useShallow } from 'zustand/react/shallow';
@@ -42,6 +43,21 @@ function PinchBar({ hand, enter, exit }: { hand: HandStat; enter: number; exit: 
   );
 }
 
+const GESTURE_LABELS: Record<ToolGesture, string> = {
+  openMenu: 'menu',
+  pause: 'pause',
+  undo: 'undo',
+  redo: 'redo',
+  refine: 'refine',
+};
+
+function gestureSummary(counts: Partial<Record<ToolGesture, number>>): string {
+  const parts = (Object.keys(GESTURE_LABELS) as ToolGesture[]).flatMap((g) =>
+    counts[g] ? [`${GESTURE_LABELS[g]} ${String(counts[g])}`] : [],
+  );
+  return parts.length ? parts.join(', ') : 'none yet';
+}
+
 const TRACKER_LABELS = { worker: 'worker', main: 'main thread', fixture: 'recorded session' } as const;
 
 export function Hud({ studio }: { studio: Studio }) {
@@ -51,6 +67,7 @@ export function Hud({ studio }: { studio: Studio }) {
       stats: st.stats,
       inputMode: st.inputMode,
       strokeCount: st.strokeCount,
+      gestures: st.gestures,
       pinch: st.pinch,
       filter: st.filter,
       calibrated: st.calibrated,
@@ -97,6 +114,7 @@ export function Hud({ studio }: { studio: Studio }) {
           />
         )}
         <Row label="Strokes" value={String(s.strokeCount)} />
+        {tracking && <Row label="Gestures" value={gestureSummary(s.gestures)} />}
       </dl>
 
       {camera && (

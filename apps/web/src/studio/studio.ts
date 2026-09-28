@@ -20,6 +20,7 @@ import {
   sampleTimeline,
   screenToCanvas,
   StrokeBuilder,
+  ToolGestureTracker,
   viewToCanvas,
   type BuildResult,
   type CoverFit,
@@ -32,6 +33,7 @@ import {
   type Stroke,
   type StrokeStyle,
   type Timeline,
+  type ToolGesture,
   type Viewport,
 } from '@afterglow/core';
 import { LightRenderer } from '@afterglow/render';
@@ -88,6 +90,10 @@ interface Replay {
 }
 
 const newId = () => crypto.randomUUID();
+
+function countGesture(name: ToolGesture): void {
+  useStudioStore.setState((s) => ({ gestures: { ...s.gestures, [name]: (s.gestures[name] ?? 0) + 1 } }));
+}
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /** `?tracker=main|worker` overrides where inference runs (see ADR 0003). */
@@ -102,6 +108,7 @@ export class Studio {
   private identity = new HandIdentity();
   private filter = new LandmarkFilter(useStudioStore.getState().filter);
   private pinch = new PinchTracker(useStudioStore.getState().pinch);
+  private tools = new ToolGestureTracker();
   private tracker: HandTracker | null = null;
   private stream: MediaStream | null = null;
   private videoSize = { width: 0, height: 0 };
@@ -342,6 +349,16 @@ export class Studio {
     if (!this.replay) this.history.redo();
   }
 
+  /** Pauses or resumes drawing with the hands; the pointer still draws. */
+  togglePause(): void {
+    const paused = !useStudioStore.getState().paused;
+    // End open strokes (P can arrive mid-stroke), but keep the gesture state: the fist that
+    // paused is still held and must not count again.
+    if (paused) this.handleEvents(this.pinch.reset(this.now()));
+    useStudioStore.setState({ paused });
+    showToast(paused ? 'Hand drawing paused' : 'Hand drawing resumed');
+  }
+
   /** Clearing needs a second press within 2.5 s. */
   requestClear(): void {
     if (this.replay || this.history.strokes.length === 0) return;
@@ -554,6 +571,7 @@ export class Studio {
     this.handleEvents(this.pinch.update(filtered, aspect));
 
     const tracked = this.pinch.status();
+    this.handleGestures(this.tools.update(filtered, aspect, tracked));
     const first = filtered.hands[0];
     if (this.measureSink && first) {
       const ratio = tracked.get(first.key)?.ratio;
@@ -571,6 +589,7 @@ export class Studio {
    */
   private finishTrackedStrokes(): void {
     this.handleEvents(this.pinch.reset(this.now()));
+    this.tools.reset();
     this.identity.reset();
     this.filter.reset();
     this.lastFiltered = null;
@@ -581,7 +600,9 @@ export class Studio {
 
   private handleEvents(events: InputEvent[]): void {
     const style = this.style();
+    const paused = useStudioStore.getState().paused;
     for (const ev of events) {
+      if (ev.type === 'gesture') continue;
       if (ev.type === 'strokeEnd') {
         const pen = this.pens.get(ev.handKey);
         if (pen) pen.state = 'hover';
@@ -589,7 +610,32 @@ export class Studio {
         this.pens.set(ev.handKey, { p: ev.p, state: ev.type === 'hover' ? 'hover' : 'drawing', color: style.color });
       }
       if (this.replay || this.calibrating || this.mode !== 'studio') continue;
+      if (paused && ev.handKey !== POINTER_KEY) continue;
       this.applyBuild(this.builder.handle(ev, style, this.frame));
+    }
+  }
+
+  private handleGestures(events: InputEvent[]): void {
+    for (const ev of events) {
+      if (ev.type !== 'gesture' || this.replay || this.calibrating || this.mode !== 'studio') continue;
+      countGesture(ev.name);
+      switch (ev.name) {
+        case 'undo':
+          this.undo();
+          showToast('Undo');
+          break;
+        case 'redo':
+          this.redo();
+          showToast('Redo');
+          break;
+        case 'pause':
+          this.togglePause();
+          break;
+        case 'openMenu':
+        case 'refine':
+          // Counted in the stats panel; the radial menu and Refine arrive in later phases.
+          break;
+      }
     }
   }
 

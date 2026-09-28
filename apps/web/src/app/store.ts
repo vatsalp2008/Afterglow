@@ -10,6 +10,7 @@ import {
   type FilterSpec,
   type PenState,
   type PinchConfig,
+  type ToolGesture,
   type TrackerDelegate,
   type TrackerMode,
 } from '@afterglow/core';
@@ -112,6 +113,10 @@ export interface StudioState {
   canRedo: boolean;
   drawing: boolean;
   hasDrawn: boolean;
+  /** Hand drawing is paused (a fist, or P); the pointer still draws. */
+  paused: boolean;
+  /** How many times each tool gesture was recognized this session. */
+  gestures: Partial<Record<ToolGesture, number>>;
   replaying: boolean;
   /** A timelapse video is being recorded. */
   recordingVideo: boolean;
@@ -169,6 +174,8 @@ export const useStudioStore = create<StudioState>()(() => ({
   canRedo: false,
   drawing: false,
   hasDrawn: false,
+  paused: false,
+  gestures: {},
   replaying: false,
   recordingVideo: false,
   session: null,
