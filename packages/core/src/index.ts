@@ -14,3 +14,6 @@ export * from './timeline.ts';
 export * from './types.ts';
 export * from './session.ts';
 export * from './gesture/handIdentity.ts';
+export * from './eval/labels.ts';
+export * from './eval/metrics.ts';
+export * from './eval/pipeline.ts';
