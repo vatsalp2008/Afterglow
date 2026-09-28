@@ -6,3 +6,4 @@ pnpm-lock.yaml
 apps/web/public
 ml
 docs/benchmarks/data
+fixtures/sessions/*.json
