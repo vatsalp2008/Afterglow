@@ -28,6 +28,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm format:check
       - run: pnpm lint
+      - run: pnpm --filter @afterglow/core docs:fsm:check
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build

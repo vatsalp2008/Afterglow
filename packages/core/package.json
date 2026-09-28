@@ -9,7 +9,9 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --coverage"
+    "test": "vitest run --coverage",
+    "docs:fsm": "node scripts/fsm-doc.mjs",
+    "docs:fsm:check": "node scripts/fsm-doc.mjs --check"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "catalog:",
