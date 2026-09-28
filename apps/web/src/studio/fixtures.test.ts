@@ -1,5 +1,6 @@
 import { parseSessionRecording } from '@afterglow/core';
 import { describe, expect, it } from 'vitest';
+import { SCENARIOS } from './scenarios';
 
 // Every committed fixture must parse and be internally consistent.
 const files = import.meta.glob<{ default: unknown }>('../../../../fixtures/sessions/*.json', { eager: true });
@@ -23,6 +24,11 @@ describe('recorded fixtures', () => {
       }
     });
   }
+
+  it('has a recording for every scenario', () => {
+    const names = Object.keys(files).map((p) => p.slice(p.lastIndexOf('/') + 1, -'.json'.length));
+    expect(names.sort()).toEqual(SCENARIOS.map((s) => s.id));
+  });
 
   it('finds the fixture directory', () => {
     // Guards against the glob path silently matching nothing after a move.
