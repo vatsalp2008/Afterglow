@@ -1,7 +1,14 @@
 // Calibration checked against real data: thresholds calibrated from a recording's
 // own open and pinched moments must reproduce its labeled strokes.
 
-import { calibratePinch, DEFAULT_PIPELINE, replaySession, scoreFixture, type PipelineConfig } from '@afterglow/core';
+import {
+  calibratePinch,
+  DEFAULT_PIPELINE,
+  fingerExtension,
+  replaySession,
+  scoreFixture,
+  type PipelineConfig,
+} from '@afterglow/core';
 import { describe, expect, it } from 'vitest';
 import { loadFixture, loadLabels } from './load.ts';
 
@@ -17,14 +24,18 @@ describe('calibration on 04-pinch-on-off', () => {
   const samples = replay.frames.filter((f) => f.hands[0] && !near(f.t));
   const open = samples.filter((f) => !inside(f.t)).map((f) => f.hands[0]!.ratio);
   const closed = samples.filter((f) => inside(f.t)).map((f) => f.hands[0]!.ratio);
+  const aspect = rec.meta.videoWidth / rec.meta.videoHeight;
+  const closedExtension = rec.frames
+    .filter((f) => f.hands[0] && inside(f.captureTime) && !near(f.captureTime))
+    .map((f) => fingerExtension(f.hands[0]!.landmarks, aspect));
 
-  it('finds separable levels', () => {
-    const c = calibratePinch(open, closed);
-    expect(c.ok).toBe(true);
+  it('finds separable levels, and keeps the fist gate for a pinch with fingers extended', () => {
+    const c = calibratePinch(open, closed, closedExtension);
+    expect(c.ok && c.result.fistBelow).toBe(DEFAULT_PIPELINE.pinch.fistBelow);
   });
 
   it('reproduces the labeled strokes with calibrated thresholds', () => {
-    const c = calibratePinch(open, closed);
+    const c = calibratePinch(open, closed, closedExtension);
     if (!c.ok) throw new Error(c.reason);
     const config: PipelineConfig = { ...DEFAULT_PIPELINE, pinch: { ...DEFAULT_PIPELINE.pinch, ...c.result } };
     const score = scoreFixture('04-pinch-on-off', replaySession(rec, config), label);

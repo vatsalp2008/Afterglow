@@ -3,19 +3,7 @@
     {
       "hand": "hand-1",
       "startMs": 702,
-      "endMs": 2868,
-      "end": "release"
-    },
-    {
-      "hand": "hand-1",
-      "startMs": 4336,
-      "endMs": 5637,
-      "end": "handLost"
-    },
-    {
-      "hand": "hand-1",
-      "startMs": 5803,
-      "endMs": 6371,
+      "endMs": 2902,
       "end": "release"
     },
     {

@@ -2,7 +2,7 @@
   "strokes": [
     {
       "hand": "hand-1",
-      "startMs": 1069,
+      "startMs": 1101,
       "endMs": 2170,
       "end": "release"
     },
@@ -15,19 +15,19 @@
     {
       "hand": "hand-1",
       "startMs": 4072,
-      "endMs": 5341,
+      "endMs": 5372,
       "end": "release"
     },
     {
       "hand": "hand-1",
       "startMs": 5506,
-      "endMs": 6873,
+      "endMs": 6903,
       "end": "release"
     },
     {
       "hand": "hand-1",
       "startMs": 7173,
-      "endMs": 9176,
+      "endMs": 9241,
       "end": "release"
     },
     {
@@ -44,7 +44,7 @@
     }
   ],
   "penState": {
-    "precision": 0.833,
-    "recall": 0.898
+    "precision": 0.818,
+    "recall": 0.893
   }
 }

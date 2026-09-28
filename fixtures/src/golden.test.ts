@@ -56,18 +56,24 @@ describe('golden replays', () => {
 });
 
 describe('correct results', () => {
-  const clean = ['01-still-hand', '02-slow-circles', '03-fast-zigzag', '04-pinch-on-off'];
+  const clean = ['01-still-hand', '02-slow-circles', '03-fast-zigzag', '04-pinch-on-off', '05-hand-leaves-frame'];
+  const noPinch = ['01-still-hand', '09-relaxed-hand', '10-open-palm', '11-fist', '12-swipes', '13-frame'];
 
   it.each(clean)('%s produces exactly the labeled strokes', (name) => {
     expect(run(name).score.strokes).toBe(labels[name]?.strokes);
   });
 
-  it.each(clean.filter((n) => labels[n]?.pinched?.length))('%s draws at least 85%% of pinched time', (name) => {
-    expect(run(name).score.penState?.recall).toBeGreaterThanOrEqual(0.85);
-  });
+  it.each([...clean, '14-low-light-2'].filter((n) => labels[n]?.pinched?.length))(
+    '%s draws at least 85%% of pinched time',
+    (name) => {
+      expect(run(name).score.penState?.recall).toBeGreaterThanOrEqual(0.85);
+    },
+  );
 
-  it('never draws on the open, still hand', () => {
-    expect(run('01-still-hand').score.penState?.precision).toBe(1);
+  it.each(noPinch)('never draws on %s', (name) => {
+    const { score } = run(name);
+    expect(score.strokes).toBe(0);
+    expect(score.penState?.precision).toBe(1);
   });
 
   it('06-two-hands draws with exactly two hands', () => {
@@ -77,10 +83,6 @@ describe('correct results', () => {
 
 // Known gaps. Each should pass one day; until then it's an expected failure.
 describe('known gaps', () => {
-  it.fails('05-hand-leaves-frame ends one stroke at the frame edge and starts one on return', () => {
-    expect(run('05-hand-leaves-frame').score.strokes).toBe(2);
-  });
-
   it.fails('07-low-light draws its held pinch as one stroke', () => {
     expect(run('07-low-light').score.strokes).toBe(1);
   });
@@ -95,5 +97,13 @@ describe('known gaps', () => {
 
   it.fails('08-rotated-hand draws at least 85% of pinched time', () => {
     expect(run('08-rotated-hand').score.penState?.recall).toBeGreaterThanOrEqual(0.85);
+  });
+
+  it.fails('14-low-light-2 draws its held pinch as one stroke', () => {
+    expect(run('14-low-light-2').score.strokes).toBe(1);
+  });
+
+  it.fails('15-rotated-hand-2 draws at least 85% of pinched time', () => {
+    expect(run('15-rotated-hand-2').score.penState?.recall).toBeGreaterThanOrEqual(0.85);
   });
 });

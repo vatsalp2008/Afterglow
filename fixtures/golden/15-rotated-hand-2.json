@@ -2,13 +2,13 @@
   "strokes": [
     {
       "hand": "hand-1",
-      "startMs": 502,
-      "endMs": 8004,
-      "end": "handLost"
+      "startMs": 1255,
+      "endMs": 4281,
+      "end": "release"
     }
   ],
   "penState": {
     "precision": 1,
-    "recall": 0.969
+    "recall": 0.254
   }
 }

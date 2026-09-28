@@ -8,8 +8,8 @@
     },
     {
       "hand": "hand-2",
-      "startMs": 5003,
-      "endMs": 7338,
+      "startMs": 5036,
+      "endMs": 7304,
       "end": "release"
     },
     {
@@ -20,7 +20,7 @@
     },
     {
       "hand": "hand-2",
-      "startMs": 7738,
+      "startMs": 7806,
       "endMs": 12000,
       "end": "handLost"
     }

@@ -48,5 +48,40 @@
     "strokes": 1,
     "pinched": [[520, 12070]],
     "source": "Held from the first moment the raw pinch measure stays below 0.3 for 150 ms, to the end, per the performer's confirmation that the pinch was kept through the rotation."
+  },
+  "09-relaxed-hand": {
+    "strokes": 0,
+    "pinched": [],
+    "source": "A relaxed, loosely curled hand moving around, never pinching (a second hand is also in view for most of it). Never pinched: the pen should stay up for the whole recording."
+  },
+  "10-open-palm": {
+    "strokes": 0,
+    "pinched": [],
+    "source": "An open palm held up 3 times. Never pinched: the pen should stay up for the whole recording."
+  },
+  "11-fist": {
+    "strokes": 0,
+    "pinched": [],
+    "source": "A fist held 3 times. In a fist the thumb genuinely presses on the index finger, so pinch measures read closed; finger curl tells it apart. Never pinched: the pen should stay up for the whole recording."
+  },
+  "12-swipes": {
+    "strokes": 0,
+    "pinched": [],
+    "source": "Two-finger swipes, 3 left then 3 right; the hand is detected in 65% of frames. Never pinched: the pen should stay up for the whole recording."
+  },
+  "13-frame": {
+    "strokes": 0,
+    "pinched": [],
+    "source": "Both hands framing with thumbs and index fingers, 3 times. Never pinched: the pen should stay up for the whole recording."
+  },
+  "14-low-light-2": {
+    "strokes": 1,
+    "pinched": [[3167, 9911]],
+    "source": "Held from the first moment the raw pinch measure (both segments, weight 1.6) stays below 0.3 for 150 ms, to the end, following the scenario instruction to keep a firm pinch. A second, less dark take of 07."
+  },
+  "15-rotated-hand-2": {
+    "strokes": 1,
+    "pinched": [[1079, 11983]],
+    "source": "Held from the first moment the raw pinch measure (both segments, weight 1.6) stays below 0.3 for 150 ms, to the end, following the scenario instruction to keep pinching through the rotation."
   }
 }
