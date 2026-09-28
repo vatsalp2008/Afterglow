@@ -25,9 +25,17 @@ describe('recorded fixtures', () => {
     });
   }
 
-  it('has a recording for every scenario', () => {
-    const names = Object.keys(files).map((p) => p.slice(p.lastIndexOf('/') + 1, -'.json'.length));
-    expect(names.sort()).toEqual(SCENARIOS.map((s) => s.id));
+  const names = Object.keys(files).map((p) => p.slice(p.lastIndexOf('/') + 1, -'.json'.length));
+
+  it('names every recording after a scenario', () => {
+    const ids = new Set(SCENARIOS.map((s) => s.id));
+    for (const name of names) expect(ids.has(name), name).toBe(true);
+  });
+
+  it('has a recording for every Phase 1 scenario', () => {
+    // Phase 2 scenarios (09 on) are recorded at the Phase 2 checkpoint.
+    const phase1 = SCENARIOS.map((s) => s.id).filter((id) => Number(id.slice(0, 2)) <= 8);
+    for (const id of phase1) expect(names).toContain(id);
   });
 
   it('finds the fixture directory', () => {

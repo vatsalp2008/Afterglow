@@ -57,4 +57,52 @@ export const SCENARIOS: readonly Scenario[] = [
     instruction: 'Pinch and draw slowly while rotating your wrist, so your palm turns sideways and then down.',
     durationMs: 12_000,
   },
+  // Phase 2: false-positive and tool-gesture checks, plus repeats of the two hard
+  // cases (07, 08) now that recordings include world landmarks.
+  {
+    id: '09-relaxed-hand',
+    title: 'Relaxed hand',
+    instruction: 'Move one relaxed hand around slowly, fingers loose and naturally curled, as if resting. Don’t pinch.',
+    durationMs: 12_000,
+  },
+  {
+    id: '10-open-palm',
+    title: 'Open palm',
+    instruction:
+      'Hold an open palm to the camera, fingers spread, for 2 seconds, then lower your hand. Do this 3 times.',
+    durationMs: 12_000,
+  },
+  {
+    id: '11-fist',
+    title: 'Fist',
+    instruction: 'Make a fist and hold it for 2 seconds, then relax your hand. Do this 3 times.',
+    durationMs: 12_000,
+  },
+  {
+    id: '12-swipes',
+    title: 'Two-finger swipes',
+    instruction: 'Hold up two fingers (index and middle) and swipe left 3 times, then right 3 times.',
+    durationMs: 12_000,
+  },
+  {
+    id: '13-frame',
+    title: 'Two-hand frame',
+    instruction:
+      'With both hands, make a frame with your thumbs and index fingers, like framing a photo. Hold for 2 seconds, then release. Do this 3 times.',
+    durationMs: 12_000,
+  },
+  {
+    id: '14-low-light-2',
+    title: 'Low light, again',
+    instruction:
+      'Dim the room or turn away from the light, then pinch firmly and draw one slow line, keeping the pinch.',
+    durationMs: 10_000,
+  },
+  {
+    id: '15-rotated-hand-2',
+    title: 'Rotated hand, again',
+    instruction:
+      'Pinch and draw slowly while rotating your wrist, so your palm turns sideways and then down. Keep pinching the whole time.',
+    durationMs: 12_000,
+  },
 ];

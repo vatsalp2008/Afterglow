@@ -39,9 +39,8 @@ describe('SessionCapture', () => {
 });
 
 describe('SCENARIOS', () => {
-  it('has 8 uniquely numbered fixtures', () => {
-    expect(SCENARIOS).toHaveLength(8);
-    expect(new Set(SCENARIOS.map((s) => s.id)).size).toBe(8);
+  it('numbers every scenario uniquely and in order', () => {
+    expect(new Set(SCENARIOS.map((s) => s.id)).size).toBe(SCENARIOS.length);
     SCENARIOS.forEach((s, i) => expect(s.id.startsWith(String(i + 1).padStart(2, '0'))).toBe(true));
   });
 });
