@@ -4,17 +4,17 @@ The full project is roughly 25 to 30 working days across eight phases. A prototy
 
 ## Status
 
-| Phase                  | Goal                                                                                                                        | Status                                    |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| P Prototype            | Prove the look and the pinch interaction with the real stack                                                                | Done                                      |
-| 0 Foundation           | pnpm + Turborepo monorepo, strict TS, lint, Vitest, Playwright, CI, ADRs; prototype code moves into its packages            | Done                                      |
-| 1 Tracking + recorder  | Worker-hosted `HandLandmarker` behind a `HandTracker` interface, session recorder, 8 fixtures, ADR on worker vs main thread | In progress: waiting on recorded fixtures |
-| 2 Signal + interaction | Filters (EMA, Kalman, One Euro), gesture state machine with tool gestures, golden replay tests, calibration, Filter Lab v1  |                                           |
-| 3 Light rendering      | Ribbon and sparks brushes, merged geometry for 500 strokes at 60 FPS, latency measurement                                   |                                           |
-| 4 Studio UX            | Radial menu, command history, exports, pointer fallback, dwell mode, e2e tests with a fixture tracker                       |                                           |
-| 5 Intelligence         | Shape snapping, Quick, Draw! model and report, Refine API                                                                   |                                           |
-| 6 Rooms                | Yjs and realtime server, remote cursors, per-user undo                                                                      |                                           |
-| 7 Launch               | Landing hero, bench page, budgets, deploys, README                                                                          |                                           |
+| Phase                  | Goal                                                                                                                        | Status |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------ |
+| P Prototype            | Prove the look and the pinch interaction with the real stack                                                                | Done   |
+| 0 Foundation           | pnpm + Turborepo monorepo, strict TS, lint, Vitest, Playwright, CI, ADRs; prototype code moves into its packages            | Done   |
+| 1 Tracking + recorder  | Worker-hosted `HandLandmarker` behind a `HandTracker` interface, session recorder, 8 fixtures, ADR on worker vs main thread | Done   |
+| 2 Signal + interaction | Filters (EMA, Kalman, One Euro), gesture state machine with tool gestures, golden replay tests, calibration, Filter Lab v1  | Next   |
+| 3 Light rendering      | Ribbon and sparks brushes, merged geometry for 500 strokes at 60 FPS, latency measurement                                   |        |
+| 4 Studio UX            | Radial menu, command history, exports, pointer fallback, dwell mode, e2e tests with a fixture tracker                       |        |
+| 5 Intelligence         | Shape snapping, Quick, Draw! model and report, Refine API                                                                   |        |
+| 6 Rooms                | Yjs and realtime server, remote cursors, per-user undo                                                                      |        |
+| 7 Launch               | Landing hero, bench page, budgets, deploys, README                                                                          |        |
 
 **Scope recommendation:** phases 0 to 4 plus Filter Lab are already a strong, complete portfolio piece. Treat phase 5 (ML and Refine) and phase 6 (rooms) as independent add-ons that can be reordered or dropped after phase 4.
 
