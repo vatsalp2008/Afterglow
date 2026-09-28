@@ -27,6 +27,6 @@ Afterglow has three deployables (the web studio, an edge API, and a realtime roo
 
 ## Consequences
 
-- Every consumer must compile TypeScript. Vite and Vitest do. `apps/realtime` runs on Node's built-in type stripping, which only supports erasable syntax, and several core classes use constructor parameter properties, which aren't erasable. When `realtime` starts importing `core` in Phase 6, either those classes move to erasable syntax or `realtime` gets a build step.
+- Every consumer must compile TypeScript. Vite and Vitest do. `packages/core` additionally uses only erasable syntax with explicit `.ts` import extensions (enforced by its tsconfig and lint), so Node 22.18+ can run it directly with built-in type stripping. That's what the evaluation scripts and, later, the realtime server rely on. (Updated in Phase 2; the original version of this ADR noted parameter properties as an obstacle.)
 - New tasks that read package sources must depend on `transit`, or they risk stale cache hits.
 - Dependency versions change in one place (the catalog), which keeps packages consistent.
