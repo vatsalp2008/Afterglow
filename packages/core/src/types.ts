@@ -23,6 +23,8 @@ export interface TrackedHand {
   score: number;
   /** 21 landmarks in landmark space (normalized, unmirrored camera image). */
   landmarks: Vec3[];
+  /** MediaPipe's world landmarks: metric 3D (meters), centered on the hand, when available. */
+  world?: Vec3[];
 }
 
 export interface HandFrame {

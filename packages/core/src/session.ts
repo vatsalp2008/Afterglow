@@ -56,12 +56,17 @@ export class SessionRecorder {
     this.frames.push({
       frameId: frame.frameId - this.firstId,
       captureTime: round(frame.captureTime - this.firstTime, 1),
-      hands: frame.hands.map((h) => ({
-        key: h.key,
-        handedness: h.handedness,
-        score: round(h.score, 3),
-        landmarks: h.landmarks.map((p) => ({ x: round(p.x, 5), y: round(p.y, 5), z: round(p.z, 5) })),
-      })),
+      hands: frame.hands.map((h): TrackedHand => {
+        const hand: TrackedHand = {
+          key: h.key,
+          handedness: h.handedness,
+          score: round(h.score, 3),
+          landmarks: h.landmarks.map((p) => ({ x: round(p.x, 5), y: round(p.y, 5), z: round(p.z, 5) })),
+        };
+        // World landmarks are in meters; 4 decimals is 0.1 mm.
+        if (h.world) hand.world = h.world.map((p) => ({ x: round(p.x, 4), y: round(p.y, 4), z: round(p.z, 4) }));
+        return hand;
+      }),
     });
   }
 
@@ -127,12 +132,18 @@ function hand(v: unknown, path: string): TrackedHand {
   const o = obj(v, path);
   const landmarks = arr(o['landmarks'], `${path}.landmarks`);
   if (landmarks.length !== 21) fail(`${path}.landmarks`, '21 landmarks');
-  return {
+  const hand: TrackedHand = {
     key: str(o['key'], `${path}.key`),
     handedness: oneOf<Handedness>(o['handedness'], ['Left', 'Right'], `${path}.handedness`),
     score: num(o['score'], `${path}.score`),
-    landmarks: landmarks.map((p, i) => landmark(p, `${path}.landmarks[${i}]`)),
+    landmarks: landmarks.map((p, i) => landmark(p, `${path}.landmarks[${String(i)}]`)),
   };
+  if (o['world'] !== undefined) {
+    const world = arr(o['world'], `${path}.world`);
+    if (world.length !== 21) fail(`${path}.world`, '21 landmarks');
+    hand.world = world.map((p, i) => landmark(p, `${path}.world[${String(i)}]`));
+  }
+  return hand;
 }
 
 /** Validates an untrusted value (e.g. parsed JSON) as a SessionRecording. */

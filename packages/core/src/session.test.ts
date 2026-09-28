@@ -99,6 +99,23 @@ describe('parseSessionRecording', () => {
     expect(() => parseSessionRecording(input)).toThrow(message);
   });
 
+  it('rounds and round-trips world landmarks when present', () => {
+    const r = new SessionRecorder();
+    const f = frame(0, 0);
+    f.hands[0]!.world = Array.from({ length: 21 }, () => ({ x: 0.012345678, y: -0.02, z: 0.001 }));
+    r.push(f);
+    const rec = r.finish(meta);
+    expect(rec.frames[0]!.hands[0]!.world![0]).toEqual({ x: 0.0123, y: -0.02, z: 0.001 });
+    expect(parseSessionRecording(JSON.parse(JSON.stringify(rec)))).toEqual(rec);
+  });
+
+  it('rejects a malformed world landmark list', () => {
+    const rec = valid();
+    const bad = JSON.parse(JSON.stringify(rec)) as { frames: Array<{ hands: Array<{ world?: unknown }> }> };
+    bad.frames[0]!.hands[0]!.world = [{ x: 0, y: 0, z: 0 }];
+    expect(() => parseSessionRecording(bad)).toThrow('frames[0].hands[0].world: expected 21 landmarks');
+  });
+
   it('keeps optional notes', () => {
     const rec = valid();
     rec.meta.notes = 'dim room';

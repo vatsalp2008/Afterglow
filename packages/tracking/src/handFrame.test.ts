@@ -23,6 +23,17 @@ describe('toHandFrame', () => {
     expect(frame.hands.map((h) => h.key)).toEqual(['Left', 'Left#1']);
   });
 
+  it('carries world landmarks through, and packs them for the worker', () => {
+    const world = [{ x: 0.01, y: 0.02, z: -0.03, visibility: 1 }];
+    const packed = packResult({
+      landmarks: [[landmark(0.4)]],
+      handedness: [category('Left')],
+      worldLandmarks: [world],
+    });
+    expect(packed.worldLandmarks).toEqual([[{ x: 0.01, y: 0.02, z: -0.03 }]]);
+    expect(toHandFrame(packed, 0, 0).hands[0]?.world).toEqual([{ x: 0.01, y: 0.02, z: -0.03 }]);
+  });
+
   it('tolerates a missing handedness entry', () => {
     const frame = toHandFrame({ landmarks: [[landmark(0.5)]], handedness: [] }, 0, 0);
     expect(frame.hands[0]).toMatchObject({ handedness: 'Left', score: 0 });
