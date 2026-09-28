@@ -73,6 +73,12 @@
   font-weight: 600;
 }
 
+.link {
+  display: inline-block;
+  margin-top: 6px;
+  color: var(--tungsten);
+}
+
 .muted {
   margin: 0 0 8px;
   color: var(--fog);

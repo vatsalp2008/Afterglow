@@ -211,6 +211,9 @@ export function Hud({ studio }: { studio: Studio }) {
               />
               Show hand skeleton
             </label>
+            <a className={styles.link} href={`${import.meta.env.BASE_URL}lab/`}>
+              Compare filters in the Filter Lab
+            </a>
           </section>
         </>
       )}
