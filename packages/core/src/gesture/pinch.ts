@@ -11,6 +11,7 @@
 
 import { landmarkToView } from '../coords.ts';
 import { LM } from '../hand.ts';
+import { dist, distToSegment, extension, toUnits } from './geometry.ts';
 import type { HandFrame, HandKey, InputEvent, PenSample, PenState, Vec3 } from '../types.ts';
 
 export interface PinchConfig {
@@ -62,23 +63,6 @@ export const DEFAULT_PINCH: PinchConfig = {
 
 // ---- measures --------------------------------------------------------------
 
-function toUnits(p: Vec3, aspect: number): Vec3 {
-  // Landmark x is normalized by width, y by height; z is roughly x-scaled.
-  return { x: p.x * aspect, y: p.y, z: p.z * aspect };
-}
-
-function dist(a: Vec3, b: Vec3): number {
-  return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
-}
-
-function distToSegment(p: Vec3, a: Vec3, b: Vec3): number {
-  const ab = { x: b.x - a.x, y: b.y - a.y, z: b.z - a.z };
-  const len2 = ab.x ** 2 + ab.y ** 2 + ab.z ** 2;
-  const t =
-    len2 === 0 ? 0 : Math.max(0, Math.min(1, ((p.x - a.x) * ab.x + (p.y - a.y) * ab.y + (p.z - a.z) * ab.z) / len2));
-  return dist(p, { x: a.x + ab.x * t, y: a.y + ab.y * t, z: a.z + ab.z * t });
-}
-
 /** Thumb-tip to index-tip distance relative to palm length. Scale invariant. */
 export function pinchRatio(landmarks: readonly Vec3[], aspect: number): number {
   const u = (i: number) => toUnits(landmarks[i]!, aspect);
@@ -113,14 +97,8 @@ export function pinchMeasure(landmarks: readonly Vec3[], aspect: number, segment
  * closed; this tells the two apart (fixture 11).
  */
 export function fingerExtension(landmarks: readonly Vec3[], aspect: number): number {
-  const u = (i: number) => toUnits(landmarks[i]!, aspect);
-  const wrist = u(LM.wrist);
-  const fingers: Array<[number, number]> = [
-    [12, 9],
-    [16, 13],
-    [20, 17],
-  ];
-  return Math.max(...fingers.map(([tip, knuckle]) => dist(u(tip), wrist) / Math.max(dist(u(knuckle), wrist), 1e-6)));
+  const u = landmarks.map((p) => toUnits(p, aspect));
+  return Math.max(extension(u, 12, 9), extension(u, 16, 13), extension(u, 20, 17));
 }
 
 /** Apparent palm length in frame-height units: a proxy for distance to the camera. */
