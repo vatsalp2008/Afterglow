@@ -1,0 +1,176 @@
+.lab {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 24px 24px 48px;
+  font-size: 14px;
+}
+
+/* The studio locks the page for its full-bleed canvas; the Lab scrolls. */
+:global(html),
+:global(body),
+:global(#root) {
+  overflow: auto;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.header h1 {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 500;
+}
+
+.header p {
+  max-width: 68ch;
+  margin: 0;
+  color: var(--fog);
+  line-height: 1.5;
+}
+
+.back {
+  flex: none;
+  color: var(--tungsten);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 290px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.controls {
+  padding: 12px 16px 16px;
+  font-size: 13px;
+}
+
+.filter {
+  margin: 14px 0 0;
+  padding: 4px 10px 2px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.filter legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+}
+
+.controls > button {
+  margin-top: 14px;
+  width: 100%;
+}
+
+.results {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.readouts {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.readouts caption {
+  padding-bottom: 8px;
+  color: var(--fog);
+  text-align: left;
+}
+
+.readouts th,
+.readouts td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+}
+
+.readouts th[scope='row'] {
+  font-weight: 500;
+  text-align: left;
+}
+
+.name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.readouts thead th {
+  color: var(--fog);
+  font-weight: 500;
+}
+
+.readouts thead th:nth-child(2) {
+  text-align: left;
+}
+
+.readouts td:first-child,
+.readouts thead th:first-child {
+  width: 1%;
+  text-align: center;
+}
+
+.readouts input {
+  accent-color: var(--tungsten);
+}
+
+.figure {
+  margin: 0;
+}
+
+.figure figcaption {
+  margin-bottom: 6px;
+  color: var(--fog);
+}
+
+.chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--night-deep);
+}
+
+.grid line {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.axis text {
+  fill: var(--fog);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.shade rect {
+  fill: rgba(255, 227, 176, 0.06);
+}
+
+.shade text {
+  fill: var(--fog);
+  font-size: 12px;
+}
+
+.swatch {
+  flex: none;
+  width: 28px;
+  height: 10px;
+}

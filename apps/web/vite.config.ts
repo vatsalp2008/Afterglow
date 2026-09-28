@@ -17,4 +17,13 @@ export default defineConfig({
   plugins: [react(), watchFixtures()],
   // MediaPipe's loader code-splits with import(), which classic (iife) workers can't do.
   worker: { format: 'es' },
+  build: {
+    // Two pages: the studio, and the Filter Lab at /lab/, which loads neither Three.js nor MediaPipe.
+    rolldownOptions: {
+      input: {
+        main: fileURLToPath(new URL('index.html', import.meta.url)),
+        lab: fileURLToPath(new URL('lab/index.html', import.meta.url)),
+      },
+    },
+  },
 });
