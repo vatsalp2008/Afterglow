@@ -187,6 +187,11 @@ describe('replaySession', () => {
     expect(r.durationMs).toBe(297);
   });
 
+  it('keeps the tracker keys when identity is disabled', () => {
+    const r = replaySession(rec, { ...DEFAULT_PIPELINE, identity: null });
+    expect(r.events.find((e) => e.type === 'strokeStart')?.handKey).toBe('Left');
+  });
+
   it('exposes the pen track in video pixels', () => {
     const track = penTrack(replaySession(rec), 480, 480);
     expect(track).toHaveLength(10);

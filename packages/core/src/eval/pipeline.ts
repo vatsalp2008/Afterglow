@@ -9,7 +9,8 @@ import type { SessionRecording } from '../session.ts';
 import type { InputEvent, PenSample } from '../types.ts';
 
 export interface PipelineConfig {
-  identity: IdentityConfig;
+  /** null keeps the tracker's own hand keys (the Phase 1 behavior), for before/after comparisons. */
+  identity: IdentityConfig | null;
   filter: FilterSpec;
   pinch: PinchConfig;
 }
@@ -42,13 +43,13 @@ export interface Replay {
 
 export function replaySession(rec: SessionRecording, config: PipelineConfig = DEFAULT_PIPELINE): Replay {
   const aspect = rec.meta.videoWidth / rec.meta.videoHeight;
-  const identity = new HandIdentity(config.identity);
+  const identity = config.identity ? new HandIdentity(config.identity) : null;
   const filter = new LandmarkFilter(config.filter);
   const pinch = new PinchTracker(config.pinch);
   const events: InputEvent[] = [];
   const frames: ReplayFrame[] = [];
   for (const frame of rec.frames) {
-    const filtered = filter.apply(identity.assign(frame, aspect));
+    const filtered = filter.apply(identity ? identity.assign(frame, aspect) : frame);
     events.push(...pinch.update(filtered, aspect));
     const status = pinch.status();
     frames.push({
