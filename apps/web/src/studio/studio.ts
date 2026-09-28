@@ -10,6 +10,7 @@ import {
   coverFit,
   frameForAspect,
   HAND_CONNECTIONS,
+  HandIdentity,
   History,
   LandmarkFilter,
   landmarkToView,
@@ -91,6 +92,7 @@ export class Studio {
   private renderer: LightRenderer;
   private history = new History();
   private builder = new StrokeBuilder(newId);
+  private identity = new HandIdentity();
   private filter = new LandmarkFilter(useStudioStore.getState().filter);
   private pinch = new PinchTracker(useStudioStore.getState().pinch);
   private tracker: HandTracker | null = null;
@@ -508,12 +510,15 @@ export class Studio {
     this.bench?.onTrackerFrame(timing);
     this.session.push(frame);
 
-    const local: HandFrame = { ...frame, captureTime: frame.captureTime - this.t0 };
     const aspect = this.frame.width / this.frame.height;
+    // Stable per-hand ids by position; MediaPipe's handedness label isn't an identity (ADR 0004).
+    const identified = this.identity.assign({ ...frame, captureTime: frame.captureTime - this.t0 }, aspect);
     this.rawPens.clear();
-    for (const h of local.hands) this.rawPens.set(h.key, penSample(h.landmarks, aspect, this.pinch.config.neutralPalm));
+    for (const h of identified.hands) {
+      this.rawPens.set(h.key, penSample(h.landmarks, aspect, this.pinch.config.neutralPalm));
+    }
 
-    const filtered = this.filter.apply(local);
+    const filtered = this.filter.apply(identified);
     this.lastFiltered = filtered;
     this.overlayDirty = true;
     this.handleEvents(this.pinch.update(filtered, aspect));
@@ -528,6 +533,7 @@ export class Studio {
    */
   private finishTrackedStrokes(): void {
     this.handleEvents(this.pinch.reset(this.now()));
+    this.identity.reset();
     this.filter.reset();
     this.lastFiltered = null;
     this.rawPens.clear();
