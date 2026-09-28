@@ -64,6 +64,10 @@ export default defineConfig([
       'no-restricted-syntax': [
         'error',
         { selector: "NewExpression[callee.name='Date']", message: 'Pass time in instead of reading a clock.' },
+        ...['ImportDeclaration', 'ExportAllDeclaration', 'ExportNamedDeclaration'].map((node) => ({
+          selector: `${node}[source.value=/^\\.\\.?\\/(?!.*\\.ts$)/]`,
+          message: 'Relative imports in core need an explicit .ts extension, so Node can run core directly.',
+        })),
       ],
     },
   },
