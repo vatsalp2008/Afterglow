@@ -81,9 +81,14 @@ These results decided [ADR 0004](adr/0004-hand-identity-by-position.md) and [ADR
 - `eval --tune`: the pinch parameter sweep.
 - `eval --filters`: the filter comparison.
 
-Everything is computed offline from the 8 recordings in [`fixtures/sessions`](../fixtures/sessions), scored against [`fixtures/labels.json`](../fixtures/labels.json). The golden snapshots in [`fixtures/golden`](../fixtures/golden) lock the results in CI.
+Everything is computed offline from the 15 recordings in [`fixtures/sessions`](../fixtures/sessions), scored against [`fixtures/labels.json`](../fixtures/labels.json). The golden snapshots in [`fixtures/golden`](../fixtures/golden) lock the results in CI.
 
-**Data:** 8 sessions by one person, recorded in Safari 26.6 on the M3 Pro's built-in camera at 640x480, with 22–30 fps tracking. They include two deliberately hard cases, low light (`07`) and wrist rotation (`08`). That's a small dataset, so treat the numbers as a regression baseline, not a population estimate.
+**Data:** 15 sessions by one person, recorded in Safari 26.6 on the M3 Pro's built-in camera at 640x480, with 19–30 fps tracking.
+
+- They include hard cases: low light (`07`, `14`) and wrist rotation (`08`, `15`).
+- Six never pinch: a still hand, a relaxed hand, an open palm, a fist, two-finger swipes, and a two-hand frame (`01`, `09`–`13`).
+
+That's a small dataset, so treat the numbers as a regression baseline, not a population estimate.
 
 **Metrics:**
 
@@ -94,39 +99,71 @@ Everything is computed offline from the 8 recordings in [`fixtures/sessions`](..
 
 ### Stroke detection, before and after
 
-"Phase 1" is the pipeline as it was: hands keyed by MediaPipe's label, tip-to-tip pinch at 0.25/0.35, One Euro (1.2, 8). "Phase 2" is the current default: identity by position, the mix pinch measure, 0.24/0.38, 3 release frames, a 250 ms rejoin window, and One Euro (0.3, 16).
+"Phase 1" is the pipeline as it was: hands keyed by MediaPipe's label, tip-to-tip pinch at 0.25/0.35, One Euro (1.2, 8). "Current" is the default now:
 
-| Fixture                | Correct | Phase 1 strokes | Phase 1 recall | Phase 2 strokes | Phase 2 recall | Phase 2 precision |
+- identity by position;
+- the fingertip-pad pinch measure and the fist gate;
+- 0.24/0.38, with a 100 ms release and a 250 ms rejoin window;
+- One Euro (0.3, 16).
+
+Recordings that pinch:
+
+| Fixture                | Correct | Phase 1 strokes | Phase 1 recall | Current strokes | Current recall | Current precision |
 | ---------------------- | ------- | --------------- | -------------- | --------------- | -------------- | ----------------- |
-| `01-still-hand`        | 0       | 0               | 1.00           | 0               | 1.00           | 1.00              |
 | `02-slow-circles`      | 1       | 1               | 0.99           | 1               | 0.99           | 1.00              |
-| `03-fast-zigzag`       | 1       | 7               | 0.79           | **1**           | **0.98**       | 1.00              |
-| `04-pinch-on-off`      | 7       | 7               | 0.89           | 7               | 0.90           | 0.83              |
-| `05-hand-leaves-frame` | 2       | 3               | –              | 4               | –              | –                 |
+| `03-fast-zigzag`       | 1       | 7               | 0.79           | **1**           | **0.97**       | 1.00              |
+| `04-pinch-on-off`      | 7       | 7               | 0.89           | 7               | 0.89           | 0.82              |
+| `05-hand-leaves-frame` | 2       | 3               | –              | **2**           | –              | –                 |
 | `06-two-hands`         | 2 hands | 5 (2 hands)     | –              | 4 (2 hands)     | –              | –                 |
-| `07-low-light`         | 1       | 0               | 0.00           | 4               | **0.32**       | 1.00              |
-| `08-rotated-hand`      | 1       | 4               | 0.38           | 4               | 0.45           | 1.00              |
+| `07-low-light`         | 1       | 0               | 0.00           | 0               | 0.00           | –                 |
+| `08-rotated-hand`      | 1       | 4               | 0.38           | 4               | 0.42           | 1.00              |
+| `14-low-light-2`       | 1       | 3               | 0.57           | 2               | **0.88**       | 1.00              |
+| `15-rotated-hand-2`    | 1       | 1               | 0.25           | 1               | 0.25           | 1.00              |
 
-| Summary                                                       | Phase 1 | Phase 2   |
-| ------------------------------------------------------------- | ------- | --------- |
-| Mean pen-state F1 (labeled fixtures)                          | 0.721   | **0.826** |
-| Broken strokes per minute of pinching, clean fixtures (02–04) | 14.7    | **0.0**   |
-| Broken strokes per minute of pinching, all labeled fixtures   | 12.1    | 8.1       |
+Recordings that never pinch. The pen should never go down. "Milestone A" is the first Phase 2 pipeline, which measured the thumb against two finger segments.
+
+| Fixture           | Phase 1          | Milestone A      | Current |
+| ----------------- | ---------------- | ---------------- | ------- |
+| `01-still-hand`   | 0                | 0                | 0       |
+| `09-relaxed-hand` | 0                | 1 stroke, 7.7 s  | 0       |
+| `10-open-palm`    | 0                | 0                | 0       |
+| `11-fist`         | 5 strokes, 3.7 s | 4 strokes, 9.2 s | 0       |
+| `12-swipes`       | 0                | 0                | 0       |
+| `13-frame`        | 0                | 0                | 0       |
+
+| Summary                                                     | Phase 1 | Current   |
+| ----------------------------------------------------------- | ------- | --------- |
+| Mean pen-state F1 (13 labeled fixtures)                     | 0.727   | **0.828** |
+| Broken strokes per minute of pinching, all held pinches     | 10.6    | **3.9**   |
+| Broken strokes per minute, clean fixtures (`02`–`04`, `14`) | 15.3    | **1.9**   |
+| Pen-down time on the fixtures that never pinch              | 3.7 s   | **0 s**   |
 
 What changed, and what didn't:
 
-- **Fast motion is fixed.** `03` now draws as one stroke covering 98% of the pinch.
-- **Low light now draws, but poorly.** `07` goes from never drawing to drawing 32% of the pinch, in 4 pieces.
-- **Rotation improved only slightly** (38% to 45% coverage).
-- **`05` got worse by one stroke**: 4 against a correct 2, where Phase 1 gave 3.
+- **Fast motion is fixed.** `03` draws as one stroke covering 97% of the pinch.
+- **Nothing that isn't a pinch draws**, including a fist, where the thumb genuinely presses on the index finger.
+- **The second low-light take works**: `14` draws 88% of the pinch, with one break where the pinch loosens for about 650 ms. The first take, `07`, draws nothing: its thumb pressed the side of the finger, which looks like a relaxed hand (ADR 0005).
+- **Rotation is the largest gap** (25–42% coverage). MediaPipe's world landmarks don't help; ADR 0005 has the numbers.
 
-These gaps are tracked as expected failures in the golden tests, and the world-landmark experiment in milestone B targets them.
+These gaps are tracked as expected failures in the golden tests.
 
 ### Pinch parameters
 
-Sweeping 3,264 configurations showed a real trade-off. The strictest start thresholds minimize stroke-count errors, but they draw less: they can't re-close once the signal drifts in rotation or low light. Across every error level, a rejoin window improved coverage (mean F1 0.675 → 0.705 at 1 error, 0.780 → 0.809 at 4 errors).
+The sweep covers 3,264 configurations. It ranks them by stroke-count errors, then by mean F1. A correct count whose strokes cover less than half the pinch still counts as an error: one short stroke isn't the stroke the user drew. Without that rule, the sweep preferred thresholds that avoid breaks only by drawing less, for example `08` as one stroke covering 11%.
 
-The defaults are the middle of a stable region. With segment weight 1.2, 3 release frames, and a 250 ms rejoin window, every start threshold from 0.18 to 0.28 gives zero stroke errors on the clean fixtures, with release thresholds of 0.35 to 0.40. A time-based release (66–150 ms) performed within noise of a 3-frame release at these frame rates, so the simpler frame count is kept.
+Fewer errors and more coverage still pull against each other, so the sweep also prints the tradeoff front, the best mean F1 at each error count:
+
+| Start | Release | Release timing | Rejoin | Errors | Mean F1         |
+| ----- | ------- | -------------- | ------ | ------ | --------------- |
+| 0.16  | 0.35    | 4 frames       | 400 ms | 3      | 0.780           |
+| 0.18  | 0.40    | 150 ms         | 150 ms | 4      | 0.802           |
+| 0.25  | 0.45    | 66 ms          | none   | 5      | 0.837           |
+| 0.25  | 0.50    | 150 ms         | 400 ms | 6      | 0.838           |
+| 0.24  | 0.38    | 100 ms         | 250 ms | 6      | 0.828 (current) |
+
+- **The start threshold is the lever.** A lower threshold avoids `14`'s break only because the pen never comes back after the loosened pinch. So the defaults keep 0.24.
+- **Release above 0.40 merges two of `04`'s pinches.** That's why the front rows at 0.45 and 0.50 score a higher F1 than the defaults and still aren't used: a user's separate strokes join.
+- **A 100 ms release** gets `03` right where 3 frames doesn't, and it doesn't depend on frame rate.
 
 ### Smoothing filters
 
