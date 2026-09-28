@@ -16,9 +16,9 @@ Fixtures make the input pipeline testable without a camera. They drive the filte
 
 Recorded on 2026-09-28 with the guided capture panel. Setup: Safari 26.6.2 on an Apple M3 Pro MacBook Pro, the built-in camera at 640x480, and the worker tracker on the GPU. Tracking ran at 22–30 fps. Safari reports timestamps at 1 ms resolution.
 
-"Correct result" is what the pipeline should produce, confirmed against the recording and with the person who performed it. "Current pipeline" is what `LandmarkFilter` plus `PinchTracker` produce at their default settings as of Phase 1. It's the baseline Phase 2 improves on.
+"Correct result" is what the pipeline should produce, confirmed against the recording and with the person who performed it. Machine-readable labels, including labeled pinch intervals, are in [`../labels.json`](../labels.json). "Phase 1 pipeline" is what the Phase 1 filter and pinch detector produced. Current results, as of Phase 2, are in [`docs/benchmarks.md`](../../docs/benchmarks.md) and locked by the golden snapshots in [`../golden`](../golden).
 
-| File                        | Performed                                                                     | Correct result                             | Current pipeline                                     |
+| File                        | Performed                                                                     | Correct result                             | Phase 1 pipeline                                     |
 | --------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------- |
 | `01-still-hand.json`        | One open hand held still, no pinch                                            | 0 strokes                                  | 0 strokes                                            |
 | `02-slow-circles.json`      | Pinch, 3 slow circles, pinch held to the end                                  | 1 stroke                                   | 1 stroke                                             |
