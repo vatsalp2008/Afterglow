@@ -80,6 +80,7 @@ These results decided [ADR 0004](adr/0004-hand-identity-by-position.md) and [ADR
 - `pnpm --filter @afterglow/fixtures eval`: the scoreboard for the current defaults.
 - `eval --tune`: the pinch parameter sweep.
 - `eval --filters`: the filter comparison.
+- The Filter Lab (`/lab/` in the web app) shows the same jitter and lag for any recording and filter settings, with the signals plotted. An e2e test checks that it reproduces the numbers below.
 
 Everything is computed offline from the 15 recordings in [`fixtures/sessions`](../fixtures/sessions), scored against [`fixtures/labels.json`](../fixtures/labels.json). The golden snapshots in [`fixtures/golden`](../fixtures/golden) lock the results in CI.
 
