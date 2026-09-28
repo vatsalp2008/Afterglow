@@ -35,6 +35,7 @@ export class StrokeBuilder {
   handle(ev: InputEvent, style: StrokeStyle, frame: FrameSize): BuildResult {
     switch (ev.type) {
       case 'hover':
+      case 'gesture':
         return { kind: 'none' };
       case 'strokeStart': {
         const stroke: Stroke = {

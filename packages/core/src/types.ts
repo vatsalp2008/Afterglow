@@ -46,11 +46,16 @@ export interface PenSample {
   depth: number;
 }
 
+/** Commands made with a hand pose instead of drawing (gesture/tools.ts). */
+export type ToolGesture = 'openMenu' | 'pause' | 'undo' | 'redo' | 'refine';
+
 export type InputEvent =
   | { type: 'strokeStart'; t: number; handKey: HandKey; p: PenSample }
   | { type: 'strokeMove'; t: number; handKey: HandKey; p: PenSample }
   | { type: 'strokeEnd'; t: number; handKey: HandKey; reason: 'release' | 'handLost' }
-  | { type: 'hover'; t: number; handKey: HandKey; p: PenSample };
+  | { type: 'hover'; t: number; handKey: HandKey; p: PenSample }
+  /** For a two-hand gesture, handKey is the first of the hands. */
+  | { type: 'gesture'; t: number; handKey: HandKey; name: ToolGesture };
 
 /** A stroke point in canvas space. */
 export interface StrokePoint {
