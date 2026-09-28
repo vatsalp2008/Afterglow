@@ -1,0 +1,14 @@
+{
+  "strokes": [
+    {
+      "hand": "hand-1",
+      "startMs": 1833,
+      "endMs": 12041,
+      "end": "handLost"
+    }
+  ],
+  "penState": {
+    "precision": 1,
+    "recall": 0.987
+  }
+}

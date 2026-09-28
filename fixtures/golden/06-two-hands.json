@@ -1,0 +1,29 @@
+{
+  "strokes": [
+    {
+      "hand": "hand-1",
+      "startMs": 934,
+      "endMs": 5036,
+      "end": "release"
+    },
+    {
+      "hand": "hand-2",
+      "startMs": 5003,
+      "endMs": 7338,
+      "end": "release"
+    },
+    {
+      "hand": "hand-1",
+      "startMs": 7838,
+      "endMs": 12000,
+      "end": "handLost"
+    },
+    {
+      "hand": "hand-2",
+      "startMs": 7738,
+      "endMs": 12000,
+      "end": "handLost"
+    }
+  ],
+  "penState": null
+}

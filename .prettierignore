@@ -8,3 +8,4 @@ ml
 docs/benchmarks/data
 fixtures/sessions/*.json
 docs/gesture-fsm.md
+fixtures/golden
