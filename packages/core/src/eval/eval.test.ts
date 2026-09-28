@@ -14,6 +14,7 @@ import {
   strokeCount,
   type TrackPoint,
 } from './metrics.ts';
+import { filterRun } from './compare.ts';
 import { DEFAULT_PIPELINE, penTrack, replaySession, type Replay } from './pipeline.ts';
 
 function replay(drawing: Array<[number, boolean]>, events: InputEvent[] = [], durationMs = 100): Replay {
@@ -239,5 +240,65 @@ describe('replaySession', () => {
     expect(track).toHaveLength(10);
     // Mirrored view space: the midpoint of the tips (x = 0.5) stays at the center.
     expect(track[0]).toEqual({ t: 0, x: 240, y: 192 });
+  });
+});
+
+describe('filterRun', () => {
+  // A pinched hand sweeping side to side, one cycle per second, for 3 s at 30 fps.
+  const base: Vec3[] = Array.from({ length: 21 }, () => ({ x: 0.5, y: 0.5, z: 0 }));
+  base[0] = { x: 0.5, y: 0.7, z: 0 };
+  base[4] = { x: 0.49, y: 0.4, z: 0 };
+  base[8] = { x: 0.51, y: 0.4, z: 0 };
+  for (const tip of [12, 16, 20]) base[tip] = { x: 0.5, y: 0.3, z: 0 };
+  const rec: SessionRecording = {
+    version: 1,
+    meta: {
+      userAgent: 'test',
+      videoWidth: 640,
+      videoHeight: 480,
+      fps: 30,
+      tracker: 'worker',
+      delegate: 'GPU',
+      recordedAt: '2026-09-28T00:00:00.000Z',
+    },
+    frames: Array.from({ length: 90 }, (_, i) => {
+      const dx = 0.2 * Math.sin((2 * Math.PI * i) / 30);
+      return {
+        frameId: i,
+        captureTime: i * 33,
+        hands: [
+          { key: 'Left', handedness: 'Left' as const, score: 1, landmarks: base.map((p) => ({ ...p, x: p.x + dx })) },
+        ],
+      };
+    }),
+  };
+  const raw = filterRun(rec, { kind: 'none' }, 'penX', null);
+
+  it('measures the raw run exactly as the benchmarks do', () => {
+    const track = penTrack(replaySession(rec, { ...DEFAULT_PIPELINE, filter: { kind: 'none' } }), 640, 480);
+    expect(raw.path).toEqual(track);
+    expect(raw.signal).toEqual(track.map((p) => ({ t: p.t, v: p.x })));
+    expect(raw.jitter).toBe(jitterRms(track));
+    expect(raw.lagMs).toBe(0);
+  });
+
+  it('measures a smoothing filter against the raw run', () => {
+    const ema = filterRun(rec, { kind: 'ema', tauMs: 60 }, 'penX', null, raw);
+    expect(ema.lagMs).toBeGreaterThan(20);
+    expect(ema.lagMs).toBeLessThan(100);
+  });
+
+  it('restricts jitter to the still interval', () => {
+    const still: [number, number] = [500, 2000];
+    const run = filterRun(rec, { kind: 'none' }, 'penY', still);
+    expect(run.jitter).toBe(jitterRms(run.path.filter((p) => p.t >= 500 && p.t <= 2000)));
+    expect(run.signal[0]).toEqual({ t: 0, v: run.path[0]!.y });
+  });
+
+  it('plots the pinch measure', () => {
+    const run = filterRun(rec, { kind: 'none' }, 'pinch', null);
+    expect(run.signal).toHaveLength(90);
+    // Fingertips 0.02 apart against a palm of 0.2, scaled by the aspect in x.
+    expect(run.signal[0]!.v).toBeCloseTo((0.02 * 640) / 480 / 0.2, 6);
   });
 });
