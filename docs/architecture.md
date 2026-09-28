@@ -4,17 +4,17 @@ Afterglow turns webcam hand tracking into glowing light strokes in real time, en
 
 ## Packages
 
-| Package             | Responsibility                                                                                                                         | Depends on                 |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| `packages/core`     | Pure logic: coordinate spaces, One Euro filtering, the pinch state machine, stroke building, undo/redo history, the timelapse timeline | nothing                    |
-| `packages/tracking` | Camera access and the MediaPipe Tasks `HandLandmarker` adapter                                                                         | core                       |
-| `packages/render`   | Three.js light renderer: ribbons, sparks, bloom, darkroom composite                                                                    | core                       |
-| `packages/ui`       | Design tokens, icons, and base React primitives                                                                                        | nothing                    |
-| `packages/collab`   | Yjs document schema and binding (Phase 6)                                                                                              | core                       |
-| `apps/web`          | The studio: wires the pipeline together and renders the controls                                                                       | core, tracking, render, ui |
-| `apps/api`          | Edge API; `/refine` arrives in Phase 5                                                                                                 | nothing                    |
-| `apps/realtime`     | Rooms server; the Yjs websocket arrives in Phase 6                                                                                     | nothing                    |
-| `ml/`               | Python training pipeline for the doodle classifier (a separate uv project)                                                             | nothing                    |
+| Package             | Responsibility                                                                                                                                                                   | Depends on                 |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `packages/core`     | Pure logic: coordinate spaces, hand identity, filters, the pinch and tool gesture state machines, stroke building, undo/redo history, the timelapse timeline, fixture evaluation | nothing                    |
+| `packages/tracking` | Camera access and the MediaPipe Tasks `HandLandmarker` adapter                                                                                                                   | core                       |
+| `packages/render`   | Three.js light renderer: ribbons, sparks, bloom, darkroom composite                                                                                                              | core                       |
+| `packages/ui`       | Design tokens, icons, and base React primitives                                                                                                                                  | nothing                    |
+| `packages/collab`   | Yjs document schema and binding (Phase 6)                                                                                                                                        | core                       |
+| `apps/web`          | The studio: wires the pipeline together and renders the controls                                                                                                                 | core, tracking, render, ui |
+| `apps/api`          | Edge API; `/refine` arrives in Phase 5                                                                                                                                           | nothing                    |
+| `apps/realtime`     | Rooms server; the Yjs websocket arrives in Phase 6                                                                                                                               | nothing                    |
+| `ml/`               | Python training pipeline for the doodle classifier (a separate uv project)                                                                                                       | nothing                    |
 
 ```mermaid
 flowchart TD
@@ -36,11 +36,15 @@ Solid arrows exist today; dashed arrows are planned.
 ```mermaid
 flowchart LR
   CAM[getUserMedia video] -->|requestVideoFrameCallback<br/>captureTime| TRK[HandLandmarker<br/>MediaPipe Tasks, GPU<br/>Web Worker]
-  TRK -->|HandFrame| FLT[LandmarkFilter<br/>One Euro per landmark]
-  FLT --> GST[PinchTracker<br/>hysteresis, hand-loss grace]
-  FIX[FixtureTracker<br/>recorded session] -->|HandFrame| FLT
+  TRK -->|HandFrame| IDN[HandIdentity<br/>stable ids by position]
+  FIX[FixtureTracker<br/>recorded session] -->|HandFrame| IDN
+  IDN --> FLT[LandmarkFilter<br/>One Euro per landmark]
+  FLT --> GST[PinchTracker<br/>hysteresis, rejoin, fist gate]
+  FLT --> TOOL[ToolGestureTracker<br/>palm, fist, swipe, frame]
+  GST -->|pen state| TOOL
   PTR[Pointer and touch] -->|InputEvent| ENG
   GST -->|InputEvent| ENG[StrokeBuilder<br/>Catmull-Rom]
+  TOOL -->|undo, redo, pause| STORE
   ENG --> STORE[(History<br/>undo and redo)]
   STORE --> REN[LightRenderer<br/>ribbons, sparks, bloom]
   CAM --> REN
@@ -51,7 +55,7 @@ flowchart LR
 ```
 
 - **Frames are driven by `requestVideoFrameCallback`**, so each camera frame is processed exactly once. Rendering runs separately on `requestAnimationFrame` and draws the latest state.
-- **Everything from `LandmarkFilter` to `History` is in `packages/core`** and never reads a clock: time is passed in with each frame or event.
+- **Everything from `HandIdentity` to `History` is in `packages/core`** and never reads a clock: time is passed in with each frame or event. Both gesture state machines run from explicit transition tables, drawn in [gesture-fsm.md](gesture-fsm.md) ([ADR 0005](adr/0005-pinch-detection.md), [ADR 0006](adr/0006-tool-gestures.md)).
 - **The pipeline runs outside React.** The studio orchestrator (`apps/web/src/studio`) owns the loop and writes cursors and the skeleton overlay straight to the DOM. React renders the controls and reads a zustand store, which the studio updates four times a second with stats.
 - **Hand tracking runs in a Web Worker**, behind a `HandTracker` interface, with an automatic main-thread fallback ([ADR 0003](adr/0003-hand-tracking-in-a-worker.md)). Camera frames are transferred as `ImageBitmap`s; one is in flight at a time, and the newest frame waits in a one-slot mailbox.
 - **Recorded sessions replay through the same interface.** `FixtureTracker` plays a recording from `fixtures/sessions` at its original timing (`?fixture=<name>`), so tests and tools get deterministic hand input without a camera. Recordings are made in the studio (press R, or `?record=fixtures` for guided capture) and store landmarks only, never video.

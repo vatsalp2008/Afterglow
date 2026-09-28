@@ -165,6 +165,22 @@ Fewer errors and more coverage still pull against each other, so the sweep also 
 - **Release above 0.40 merges two of `04`'s pinches.** That's why the front rows at 0.45 and 0.50 score a higher F1 than the defaults and still aren't used: a user's separate strokes join.
 - **A 100 ms release** gets `03` right where 3 frames doesn't, and it doesn't depend on frame rate.
 
+### Tool gestures
+
+These results decided [ADR 0006](adr/0006-tool-gestures.md). Gestures are scored against labeled windows: each labeled gesture must be detected inside its window, and anything else detected is a false trigger.
+
+| Recording                          | Labeled      | Detected | False triggers |
+| ---------------------------------- | ------------ | -------- | -------------- |
+| `11-fist`                          | 4 pauses     | 4        | 0              |
+| `13-frame`                         | 3 refines    | 3        | 0              |
+| `10-open-palm`                     | 3 menu opens | 1        | 1              |
+| `12-swipes`                        | not labeled  | 3 redos  | –              |
+| The 11 recordings without gestures | none         | none     | **0**          |
+
+- **`10` falls short by design.** The palm never closes between raises, and a held pose fires once until it ends.
+- **`12` can't be scored**, because it isn't known which of its moves were swipes and which were returns. ADR 0006 has both, and the re-record scenarios that fix them.
+- **Nothing fires on any drawing recording**, including two hands drawing at once (`06`) and a hand leaving the frame (`05`).
+
 ### Smoothing filters
 
 Jitter is measured on `01-still-hand` while it's held still (2.5–9.9 s): RMS of the pen point around its 1 s moving average, in px at 640x480. Lag is the delay that best aligns each filtered track with the raw track on `03-fast-zigzag`.
