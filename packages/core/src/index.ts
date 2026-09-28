@@ -17,3 +17,4 @@ export * from './gesture/handIdentity.ts';
 export * from './eval/labels.ts';
 export * from './eval/metrics.ts';
 export * from './eval/pipeline.ts';
+export * from './gesture/calibration.ts';
