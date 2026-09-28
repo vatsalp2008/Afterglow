@@ -16,14 +16,19 @@ stateDiagram-v2
   pressing --> [*]: lost
   drawing --> drawing: closed / move
   drawing --> drawing: between / move
-  drawing --> hover: open (confirmed) / release
+  drawing --> lifted: open (confirmed) / drop
   drawing --> releasing: open (not yet) / hold
   drawing --> [*]: lost / lose
   releasing --> drawing: closed / flush, move
   releasing --> drawing: between / flush, move
-  releasing --> hover: open (confirmed) / release
+  releasing --> lifted: open (confirmed) / drop
   releasing --> releasing: open (not yet) / hold
   releasing --> [*]: lost / lose
+  lifted --> drawing: closed (not yet) / move
+  lifted --> pressing: closed (confirmed) / release
+  lifted --> hover: between (confirmed) / release
+  lifted --> hover: open (confirmed) / release
+  lifted --> [*]: lost / lose
 ```
 
 Hover-only self-loops are omitted from the diagram. The full table:
@@ -42,13 +47,20 @@ Hover-only self-loops are omitted from the diagram. The full table:
 | pressing | lost |  | gone | none |
 | drawing | closed |  | drawing | move |
 | drawing | between |  | drawing | move |
-| drawing | open | confirmed | hover | release, hover |
+| drawing | open | confirmed | lifted | drop |
 | drawing | open | not yet | releasing | hold |
 | drawing | lost |  | gone | lose |
 | releasing | closed |  | drawing | flush, move |
 | releasing | between |  | drawing | flush, move |
-| releasing | open | confirmed | hover | release, hover |
+| releasing | open | confirmed | lifted | drop |
 | releasing | open | not yet | releasing | hold |
 | releasing | lost |  | gone | lose |
+| lifted | closed | not yet | drawing | move |
+| lifted | closed | confirmed | pressing | release, hover |
+| lifted | between | not yet | lifted | hover |
+| lifted | between | confirmed | hover | release, hover |
+| lifted | open | not yet | lifted | hover |
+| lifted | open | confirmed | hover | release, hover |
+| lifted | lost |  | gone | lose |
 
 Actions: **start** and **move** emit stroke events; **hold** keeps a sample back while the fingers may be opening; **flush** emits the held samples when it turns out not to be a release; **release** drops them and ends the stroke; **lose** ends the stroke because the hand is gone.
