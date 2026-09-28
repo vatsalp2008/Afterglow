@@ -170,6 +170,22 @@ importers:
         specifier: 'catalog:'
         version: 5.0.2(@types/node@22.20.4)(@vitest/coverage-v8@5.0.2)(vite@8.3.1(@types/node@22.20.4))
 
+  fixtures:
+    dependencies:
+      '@afterglow/core':
+        specifier: workspace:*
+        version: link:../packages/core
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 22.20.4
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.2(@types/node@22.20.4)(@vitest/coverage-v8@5.0.2)(vite@8.3.1(@types/node@22.20.4))
+
   packages/collab:
     dependencies:
       '@afterglow/core':

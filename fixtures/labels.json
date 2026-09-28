@@ -1,0 +1,52 @@
+{
+  "01-still-hand": {
+    "strokes": 0,
+    "pinched": [],
+    "source": "Open hand throughout; the raw fingertip ratio never drops below 0.9. The hand enters the frame during the first two seconds (steps of up to 84 px); it's held still from 2.5 s on, which is the stretch used for jitter.",
+    "still": [2500, 9939]
+  },
+  "02-slow-circles": {
+    "strokes": 1,
+    "pinched": [[1702, 12041]],
+    "source": "Held from the first moment the raw pinch measure stays below 0.3 for 150 ms, to the end of the recording (the pinch is still held when it ends)."
+  },
+  "03-fast-zigzag": {
+    "strokes": 1,
+    "pinched": [[366, 8004]],
+    "source": "Held from the first moment the raw pinch measure stays below 0.3 for 150 ms, to the end."
+  },
+  "04-pinch-on-off": {
+    "strokes": 7,
+    "pinched": [
+      [937, 1670],
+      [2503, 3304],
+      [3972, 4772],
+      [5372, 6273],
+      [7073, 8674],
+      [9509, 10710],
+      [11442, 11975]
+    ],
+    "source": "Where the raw fingertip ratio is below 0.3, merging gaps under 100 ms and dropping blips under 150 ms. Unambiguous: every release in between peaks at 0.48 to 0.79."
+  },
+  "05-hand-leaves-frame": {
+    "strokes": 2,
+    "pinched": null,
+    "source": "A stroke before leaving the frame and one after returning. Not labeled per frame: the pinch state while the hand is partly out of frame is unknowable."
+  },
+  "06-two-hands": {
+    "strokes": null,
+    "hands": 2,
+    "pinched": null,
+    "source": "Both hands draw, partly at the same time. The exact stroke count and timing weren't recorded; the requirement is strokes from exactly 2 hands."
+  },
+  "07-low-light": {
+    "strokes": 1,
+    "pinched": [[1502, 9974]],
+    "source": "Held from the first frame the hand is seen (it already reads closed) to the end, per the performer's confirmation of a firm pinch. The raw signal reads closed in only 22% of frames, so this fixture measures how much low light degrades the pinch."
+  },
+  "08-rotated-hand": {
+    "strokes": 1,
+    "pinched": [[520, 12070]],
+    "source": "Held from the first moment the raw pinch measure stays below 0.3 for 150 ms, to the end, per the performer's confirmation that the pinch was kept through the rotation."
+  }
+}

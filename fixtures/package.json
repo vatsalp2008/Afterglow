@@ -1,0 +1,23 @@
+{
+  "name": "@afterglow/fixtures",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/load.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "eval": "node scripts/eval.ts",
+    "tune": "node scripts/eval.ts --tune"
+  },
+  "dependencies": {
+    "@afterglow/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
