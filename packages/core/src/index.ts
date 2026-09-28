@@ -13,3 +13,4 @@ export * from './stroke/strokeBuilder.ts';
 export * from './timeline.ts';
 export * from './types.ts';
 export * from './session.ts';
+export * from './gesture/handIdentity.ts';
