@@ -1,5 +1,19 @@
 {
   "strokes": [],
+  "gestures": [
+    {
+      "name": "redo",
+      "t": 1945
+    },
+    {
+      "name": "redo",
+      "t": 4063
+    },
+    {
+      "name": "redo",
+      "t": 6443
+    }
+  ],
   "penState": {
     "precision": 1,
     "recall": 1

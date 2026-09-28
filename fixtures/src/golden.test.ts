@@ -6,7 +6,7 @@
 // doesn't handle yet are expected failures (it.fails), so fixing one flips its
 // test red and forces the record to be updated.
 
-import { DEFAULT_PIPELINE, replaySession, scoreFixture, type InputEvent } from '@afterglow/core';
+import { DEFAULT_PIPELINE, detectedGestures, replaySession, scoreFixture, type InputEvent } from '@afterglow/core';
 import { describe, expect, it } from 'vitest';
 import { fixtureNames, loadFixture, loadLabels } from './load.ts';
 
@@ -46,6 +46,7 @@ describe('golden replays', () => {
     const { replay, score } = run(name);
     const golden = {
       strokes: strokes(replay.events),
+      gestures: detectedGestures(replay).map((g) => ({ name: g.name, t: Math.round(g.t) })),
       penState: score.penState && {
         precision: round(score.penState.precision),
         recall: round(score.penState.recall),
@@ -81,6 +82,34 @@ describe('correct results', () => {
   });
 });
 
+describe('tool gestures', () => {
+  const without = fixtureNames().filter((n) => labels[n]?.gestures?.length === 0);
+
+  it.each(without)('%s triggers no tool gesture', (name) => {
+    expect(run(name).score.gestures?.detected).toEqual([]);
+  });
+
+  it.each(['11-fist', '13-frame'])('%s detects exactly its labeled gestures', (name) => {
+    const g = run(name).score.gestures!;
+    expect(g.matched).toBe(g.expected);
+    expect(g.falseTriggers).toEqual([]);
+  });
+
+  it('10-open-palm opens the menu on the first raise, and only opens the menu', () => {
+    const { detected } = run('10-open-palm').score.gestures!;
+    expect(detected[0]).toMatchObject({ name: 'openMenu' });
+    expect(detected[0]!.t).toBeGreaterThanOrEqual(1000);
+    expect(detected[0]!.t).toBeLessThanOrEqual(2800);
+    expect(new Set(detected.map((d) => d.name))).toEqual(new Set(['openMenu']));
+  });
+
+  it('12-swipes only undoes and redoes', () => {
+    const detected = detectedGestures(run('12-swipes').replay);
+    expect(detected.length).toBeGreaterThan(0);
+    expect(detected.every((d) => d.name === 'undo' || d.name === 'redo')).toBe(true);
+  });
+});
+
 // Known gaps. Each should pass one day; until then it's an expected failure.
 describe('known gaps', () => {
   it.fails('07-low-light draws its held pinch as one stroke', () => {
@@ -105,5 +134,12 @@ describe('known gaps', () => {
 
   it.fails('15-rotated-hand-2 draws at least 85% of pinched time', () => {
     expect(run('15-rotated-hand-2').score.penState?.recall).toBeGreaterThanOrEqual(0.85);
+  });
+
+  // The palm stays open between raises, and a held pose fires once until it ends.
+  it.fails('10-open-palm opens the menu on each of its 3 raises, and only then', () => {
+    const g = run('10-open-palm').score.gestures!;
+    expect(g.matched).toBe(3);
+    expect(g.falseTriggers).toEqual([]);
   });
 });

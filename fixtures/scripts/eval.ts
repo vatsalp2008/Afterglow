@@ -1,6 +1,6 @@
 // Scores the input pipeline against the recorded fixtures.
 //
-//   pnpm --filter @afterglow/fixtures eval             scoreboard for the current defaults
+//   pnpm --filter @afterglow/fixtures eval             scoreboard for the current defaults (pen and tool gestures)
 //   pnpm --filter @afterglow/fixtures eval --tune      sweep pinch settings
 //   pnpm --filter @afterglow/fixtures eval --filters   jitter and lag per filter
 //   add --json for machine-readable output
@@ -8,6 +8,7 @@
 import {
   DEFAULT_FILTER_SPECS,
   DEFAULT_PIPELINE,
+  detectedGestures,
   estimateLag,
   jitterRms,
   penTrack,
@@ -80,16 +81,29 @@ function printScoreboard(config: PipelineConfig): void {
     return;
   }
   console.log(`filter: ${describeFilter(config.filter)}\npinch:  ${describePinch(config.pinch)}\n`);
-  console.log('fixture                 strokes  hands  precision  recall    F1   release  broken/min');
+  console.log(
+    'fixture                 strokes  hands  precision  recall    F1   release  broken/min  gestures  false  detected',
+  );
   for (const s of scores) {
     const strokes = `${String(s.strokes)} / ${s.expectedStrokes === null ? '-' : String(s.expectedStrokes)}`;
     const hands = s.expectedHands === null ? String(s.hands) : `${String(s.hands)} / ${String(s.expectedHands)}`;
+    const g = s.gestures;
+    const detected = (g?.detected ?? detectedGestures(replaySession(fixtures.get(s.name)!, config)))
+      .map((d) => `${d.name}@${(d.t / 1000).toFixed(1)}`)
+      .join(' ');
     console.log(
-      `${s.name.padEnd(24)}${strokes.padStart(7)}  ${hands.padStart(5)}  ${f2(s.penState?.precision).padStart(9)}  ${f2(s.penState?.recall).padStart(6)}  ${f2(s.penState?.f1).padStart(4)}  ${ms(s.releaseMs)}  ${s.brokenPerMinute === null ? '         -' : s.brokenPerMinute.toFixed(1).padStart(10)}`,
+      `${s.name.padEnd(24)}${strokes.padStart(7)}  ${hands.padStart(5)}  ${f2(s.penState?.precision).padStart(9)}  ${f2(s.penState?.recall).padStart(6)}  ${f2(s.penState?.f1).padStart(4)}  ${ms(s.releaseMs)}  ${s.brokenPerMinute === null ? '         -' : s.brokenPerMinute.toFixed(1).padStart(10)}  ${(g ? `${String(g.matched)} / ${String(g.expected)}` : '-').padStart(8)}  ${(g ? String(g.falseTriggers.length) : '-').padStart(5)}  ${detected}`,
     );
   }
   console.log(
     `\nstroke errors ${String(summary.strokeError)}, hand errors ${String(summary.handErrors)}, mean F1 ${summary.meanF1.toFixed(3)}, lowest recall ${summary.minRecall.toFixed(2)}, mean release ${ms(summary.releaseMs).trim()}`,
+  );
+  const gestures = scores.flatMap((s) => (s.gestures ? [s.gestures] : []));
+  const drawingFalse = scores
+    .filter((s) => s.gestures?.expected === 0)
+    .reduce((n, s) => n + s.gestures!.falseTriggers.length, 0);
+  console.log(
+    `gestures matched ${String(gestures.reduce((n, g) => n + g.matched, 0))} / ${String(gestures.reduce((n, g) => n + g.expected, 0))}, false triggers ${String(gestures.reduce((n, g) => n + g.falseTriggers.length, 0))} (${String(drawingFalse)} on fixtures without gestures)`,
   );
 }
 

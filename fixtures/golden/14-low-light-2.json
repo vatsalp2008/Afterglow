@@ -13,6 +13,7 @@
       "end": "handLost"
     }
   ],
+  "gestures": [],
   "penState": {
     "precision": 1,
     "recall": 0.881

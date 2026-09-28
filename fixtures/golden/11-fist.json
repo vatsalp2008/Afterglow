@@ -1,5 +1,23 @@
 {
   "strokes": [],
+  "gestures": [
+    {
+      "name": "pause",
+      "t": 346
+    },
+    {
+      "name": "pause",
+      "t": 7134
+    },
+    {
+      "name": "pause",
+      "t": 9689
+    },
+    {
+      "name": "pause",
+      "t": 11763
+    }
+  ],
   "penState": {
     "precision": 1,
     "recall": 1

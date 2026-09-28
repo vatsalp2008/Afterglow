@@ -1,5 +1,19 @@
 {
   "strokes": [],
+  "gestures": [
+    {
+      "name": "refine",
+      "t": 515
+    },
+    {
+      "name": "refine",
+      "t": 3240
+    },
+    {
+      "name": "refine",
+      "t": 10253
+    }
+  ],
   "penState": {
     "precision": 1,
     "recall": 1

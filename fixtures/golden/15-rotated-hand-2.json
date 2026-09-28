@@ -7,6 +7,7 @@
       "end": "release"
     }
   ],
+  "gestures": [],
   "penState": {
     "precision": 1,
     "recall": 0.254

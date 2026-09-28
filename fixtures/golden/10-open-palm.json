@@ -1,5 +1,15 @@
 {
   "strokes": [],
+  "gestures": [
+    {
+      "name": "openMenu",
+      "t": 1602
+    },
+    {
+      "name": "openMenu",
+      "t": 11985
+    }
+  ],
   "penState": {
     "precision": 1,
     "recall": 1

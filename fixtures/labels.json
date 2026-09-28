@@ -3,17 +3,20 @@
     "strokes": 0,
     "pinched": [],
     "source": "Open hand throughout; the raw fingertip ratio never drops below 0.9. The hand enters the frame during the first two seconds (steps of up to 84 px); it's held still from 2.5 s on, which is the stretch used for jitter.",
-    "still": [2500, 9939]
+    "still": [2500, 9939],
+    "gestures": []
   },
   "02-slow-circles": {
     "strokes": 1,
     "pinched": [[1702, 12041]],
-    "source": "Held from the first moment the raw pinch measure stays below 0.3 for 150 ms, to the end of the recording (the pinch is still held when it ends)."
+    "source": "Held from the first moment the raw pinch measure stays below 0.3 for 150 ms, to the end of the recording (the pinch is still held when it ends).",
+    "gestures": []
   },
   "03-fast-zigzag": {
     "strokes": 1,
     "pinched": [[366, 8004]],
-    "source": "Held from the first moment the raw pinch measure stays below 0.3 for 150 ms, to the end."
+    "source": "Held from the first moment the raw pinch measure stays below 0.3 for 150 ms, to the end.",
+    "gestures": []
   },
   "04-pinch-on-off": {
     "strokes": 7,
@@ -26,62 +29,117 @@
       [9509, 10710],
       [11442, 11975]
     ],
-    "source": "Where the raw fingertip ratio is below 0.3, merging gaps under 100 ms and dropping blips under 150 ms. Unambiguous: every release in between peaks at 0.48 to 0.79."
+    "source": "Where the raw fingertip ratio is below 0.3, merging gaps under 100 ms and dropping blips under 150 ms. Unambiguous: every release in between peaks at 0.48 to 0.79.",
+    "gestures": []
   },
   "05-hand-leaves-frame": {
     "strokes": 2,
     "pinched": null,
-    "source": "A stroke before leaving the frame and one after returning. Not labeled per frame: the pinch state while the hand is partly out of frame is unknowable."
+    "source": "A stroke before leaving the frame and one after returning. Not labeled per frame: the pinch state while the hand is partly out of frame is unknowable.",
+    "gestures": []
   },
   "06-two-hands": {
     "strokes": null,
     "hands": 2,
     "pinched": null,
-    "source": "Both hands draw, partly at the same time. The exact stroke count and timing weren't recorded; the requirement is strokes from exactly 2 hands."
+    "source": "Both hands draw, partly at the same time. The exact stroke count and timing weren't recorded; the requirement is strokes from exactly 2 hands.",
+    "gestures": []
   },
   "07-low-light": {
     "strokes": 1,
     "pinched": [[1502, 9974]],
-    "source": "Held from the first frame the hand is seen (it already reads closed) to the end, per the performer's confirmation of a firm pinch. The raw signal reads closed in only 22% of frames, so this fixture measures how much low light degrades the pinch."
+    "source": "Held from the first frame the hand is seen (it already reads closed) to the end, per the performer's confirmation of a firm pinch. The raw signal reads closed in only 22% of frames, so this fixture measures how much low light degrades the pinch.",
+    "gestures": []
   },
   "08-rotated-hand": {
     "strokes": 1,
     "pinched": [[520, 12070]],
-    "source": "Held from the first moment the raw pinch measure stays below 0.3 for 150 ms, to the end, per the performer's confirmation that the pinch was kept through the rotation."
+    "source": "Held from the first moment the raw pinch measure stays below 0.3 for 150 ms, to the end, per the performer's confirmation that the pinch was kept through the rotation.",
+    "gestures": []
   },
   "09-relaxed-hand": {
     "strokes": 0,
     "pinched": [],
-    "source": "A relaxed, loosely curled hand moving around, never pinching (a second hand is also in view for most of it). Never pinched: the pen should stay up for the whole recording."
+    "source": "A relaxed, loosely curled hand moving around, never pinching (a second hand is also in view for most of it). Never pinched: the pen should stay up for the whole recording.",
+    "gestures": []
   },
   "10-open-palm": {
     "strokes": 0,
     "pinched": [],
-    "source": "An open palm held up 3 times. Never pinched: the pen should stay up for the whole recording."
+    "source": "An open palm held up 3 times. Never pinched: the pen should stay up for the whole recording. Gestures: the palm is raised and held 3 times (about 1.0-2.5 s, 6.3-7.3 s, and 9.8-10.6 s). It stays open and spread while lowered in between, and the thumb relaxes a little on the third raise.",
+    "gestures": [
+      {
+        "name": "openMenu",
+        "at": [1000, 2800]
+      },
+      {
+        "name": "openMenu",
+        "at": [6000, 7600]
+      },
+      {
+        "name": "openMenu",
+        "at": [9500, 10900]
+      }
+    ]
   },
   "11-fist": {
     "strokes": 0,
     "pinched": [],
-    "source": "A fist held 3 times. In a fist the thumb genuinely presses on the index finger, so pinch measures read closed; finger curl tells it apart. Never pinched: the pen should stay up for the whole recording."
+    "source": "A fist held 3 times. In a fist the thumb genuinely presses on the index finger, so pinch measures read closed; finger curl tells it apart. Never pinched: the pen should stay up for the whole recording. Gestures: 4 fists (from about 0.1, 6.8, 9.4, and 11.4 s), each followed by opening the hand wide to relax; the recording starts and ends mid-fist.",
+    "gestures": [
+      {
+        "name": "pause",
+        "at": [0, 900]
+      },
+      {
+        "name": "pause",
+        "at": [6700, 7600]
+      },
+      {
+        "name": "pause",
+        "at": [9300, 10200]
+      },
+      {
+        "name": "pause",
+        "at": [11300, 12000]
+      }
+    ]
   },
   "12-swipes": {
     "strokes": 0,
     "pinched": [],
-    "source": "Two-finger swipes, 3 left then 3 right; the hand is detected in 65% of frames. Never pinched: the pen should stay up for the whole recording."
+    "source": "Two-finger swipes, 3 left then 3 right; the hand is detected in 65% of frames. Never pinched: the pen should stay up for the whole recording. Gestures not labeled: the hand moves left, right, left, right, left, right, left at the same speed each way, and which moves were swipes and which were returns isn't known.",
+    "gestures": null
   },
   "13-frame": {
     "strokes": 0,
     "pinched": [],
-    "source": "Both hands framing with thumbs and index fingers, 3 times. Never pinched: the pen should stay up for the whole recording."
+    "source": "Both hands framing with thumbs and index fingers, 3 times. Never pinched: the pen should stay up for the whole recording. Gestures: framed 3 times, index fingers up and thumb tips together (about 0-1.6 s, 2.7-8.8 s, and 10.1-11.2 s); in between, the hands tilt inward (1.6-2.6 s) or pull apart (8.9-9.9 s).",
+    "gestures": [
+      {
+        "name": "refine",
+        "at": [0, 1600]
+      },
+      {
+        "name": "refine",
+        "at": [2600, 8900]
+      },
+      {
+        "name": "refine",
+        "at": [10000, 12000]
+      }
+    ]
   },
   "14-low-light-2": {
     "strokes": 1,
     "pinched": [[3167, 9911]],
-    "source": "Held from the first moment the raw pinch measure (both segments, weight 1.6) stays below 0.3 for 150 ms, to the end, following the scenario instruction to keep a firm pinch. A second, less dark take of 07."
+    "source": "Held from the first moment the raw pinch measure (both segments, weight 1.6) stays below 0.3 for 150 ms, to the end, following the scenario instruction to keep a firm pinch. A second, less dark take of 07.",
+    "gestures": []
   },
   "15-rotated-hand-2": {
     "strokes": 1,
     "pinched": [[1079, 11983]],
-    "source": "Held from the first moment the raw pinch measure (both segments, weight 1.6) stays below 0.3 for 150 ms, to the end, following the scenario instruction to keep pinching through the rotation."
+    "source": "Held from the first moment the raw pinch measure (both segments, weight 1.6) stays below 0.3 for 150 ms, to the end, following the scenario instruction to keep pinching through the rotation.",
+    "gestures": []
   }
 }
