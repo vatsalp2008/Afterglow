@@ -11,8 +11,10 @@ export interface KalmanParams {
   measurementNoise: number;
 }
 
-// Provisional; tuned against the recorded fixtures by the evaluation harness.
-export const DEFAULT_KALMAN: KalmanParams = { processNoise: 0.2, measurementNoise: 1e-5 };
+// A setting that visibly smooths real hand motion (0.39 px vs 0.44 px raw on a still
+// hand) at a clear lag cost (115 ms at speed). A constant-velocity model fits hand
+// motion poorly: see docs/benchmarks.md.
+export const DEFAULT_KALMAN: KalmanParams = { processNoise: 0.002, measurementNoise: 1e-4 };
 
 export class KalmanFilter implements Filter {
   params: KalmanParams;

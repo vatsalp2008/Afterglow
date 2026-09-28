@@ -13,7 +13,9 @@ export interface OneEuroParams {
   dCutoff: number;
 }
 
-export const DEFAULT_ONE_EURO: OneEuroParams = { minCutoff: 1.2, beta: 8, dCutoff: 1 };
+// Tuned on the recorded fixtures (docs/benchmarks.md): on a still hand, 45% less
+// jitter than raw MediaPipe output for 20 ms of lag at speed.
+export const DEFAULT_ONE_EURO: OneEuroParams = { minCutoff: 0.3, beta: 16, dCutoff: 1 };
 
 function smoothingFactor(cutoffHz: number, dtSec: number): number {
   const tau = 1 / (2 * Math.PI * cutoffHz);

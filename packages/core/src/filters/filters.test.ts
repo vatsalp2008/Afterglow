@@ -51,10 +51,21 @@ describe('every filter', () => {
     expect(f.next(5, 33)).toBe(kind === 'none' ? 5 : y);
   });
 
-  it.each(kinds)('%s converges on a step within a second', (kind) => {
+  it.each(kinds)('%s converges on a step', (kind) => {
     const f = createFilter(DEFAULT_FILTER_SPECS[kind]);
-    const out = run(f, (t) => (t < 100 ? 0 : 1), 1100);
+    const out = run(f, (t) => (t < 100 ? 0 : 1), 3000);
     expect(out[out.length - 1]![2]).toBeCloseTo(1, 2);
+  });
+
+  it.each(['ema', 'oneEuro'] as const)('%s never overshoots a step', (kind) => {
+    const out = run(createFilter(DEFAULT_FILTER_SPECS[kind]), (t) => (t < 100 ? 0 : 1), 3000);
+    expect(Math.max(...out.map((s) => s[2]))).toBeLessThanOrEqual(1 + 1e-9);
+  });
+
+  it('kalman overshoots a sudden stop, because it expects constant velocity', () => {
+    // Measured 27% with the defaults: the reason it scores poorly on hand input.
+    const out = run(createFilter(DEFAULT_FILTER_SPECS.kalman), (t) => (t < 100 ? 0 : 1), 3000);
+    expect(Math.max(...out.map((s) => s[2]))).toBeGreaterThan(1.1);
   });
 
   it.each(kinds)('%s starts over after reset', (kind) => {
