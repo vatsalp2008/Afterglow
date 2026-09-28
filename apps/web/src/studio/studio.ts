@@ -236,6 +236,7 @@ export class Studio {
     this.tracker = new FixtureTracker(recording, {
       loop,
       onEnd: () => {
+        this.finishTrackedStrokes();
         showToast(`Fixture ${name} finished`);
       },
     });
@@ -256,6 +257,7 @@ export class Studio {
   async switchCamera(opts: CameraOptions): Promise<void> {
     if (!this.stream) return;
     this.tracker?.stop();
+    this.finishTrackedStrokes();
     stopCamera(this.stream);
     this.stream = null;
     try {
@@ -449,6 +451,7 @@ export class Studio {
     const restoreMode = this.tracker.mode === 'main' ? 'main' : 'worker';
     this.tracker.close();
     this.tracker = null;
+    this.finishTrackedStrokes();
     const opts = { video: this.els.video, wasmBasePath: WASM_BASE_PATH };
     const { WorkerHandTracker, createHandTracker } = await import('@afterglow/tracking/mediapipe');
     const { MainThreadHandTracker } = await import('@afterglow/tracking/main-thread');
@@ -518,6 +521,19 @@ export class Studio {
     const tracked = this.pinch.status();
     for (const key of this.pens.keys()) if (key !== POINTER_KEY && !tracked.has(key)) this.pens.delete(key);
   };
+
+  /**
+   * Ends strokes held by tracked hands and forgets per-hand state. Needed whenever
+   * the input source stops: with no more frames, hand-loss detection never fires.
+   */
+  private finishTrackedStrokes(): void {
+    this.handleEvents(this.pinch.reset(this.now()));
+    this.filter.reset();
+    this.lastFiltered = null;
+    this.rawPens.clear();
+    for (const key of this.pens.keys()) if (key !== POINTER_KEY) this.pens.delete(key);
+    this.overlayDirty = true;
+  }
 
   private handleEvents(events: InputEvent[]): void {
     const style = this.style();
