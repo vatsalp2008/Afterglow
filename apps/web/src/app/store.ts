@@ -102,6 +102,11 @@ export interface StudioState {
   calibrated: boolean;
   calibrationOpen: boolean;
   calibrationOffered: boolean;
+  /**
+   * A saved calibration fits the person who made it, but it's saved per browser, so each
+   * visit asks whether someone new is painting. Dismissed for this visit only.
+   */
+  recalibrationDismissed: boolean;
 
   cameras: CameraDevice[];
   cameraId: string | null;
@@ -148,6 +153,7 @@ export const useStudioStore = create<StudioState>()(() => ({
   calibrated: saved !== null,
   calibrationOpen: false,
   calibrationOffered: typeof localStorage !== 'undefined' && localStorage.getItem(OFFERED_KEY) !== null,
+  recalibrationDismissed: false,
 
   cameras: [],
   cameraId: null,
@@ -203,7 +209,7 @@ export function resetPinchCalibration(): void {
 }
 
 export function markCalibrationOffered(): void {
-  useStudioStore.setState({ calibrationOffered: true });
+  useStudioStore.setState({ calibrationOffered: true, recalibrationDismissed: true });
   try {
     localStorage.setItem(OFFERED_KEY, '1');
   } catch {

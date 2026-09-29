@@ -45,7 +45,7 @@ export function CalibrationPanel({ studio }: { studio: Studio }) {
     const measure = async (kind: 'open' | 'pinch') => {
       setStep({ kind, sampling: false });
       await sleep(SETTLE_MS);
-      if (isCancelled()) return { measures: [], extensions: [] };
+      if (isCancelled()) return { measures: [], fists: [] };
       setStep({ kind, sampling: true });
       return studio.sampleMeasures(SAMPLE_MS);
     };
@@ -53,7 +53,7 @@ export function CalibrationPanel({ studio }: { studio: Studio }) {
     const pinched = await measure('pinch');
     studio.endCalibration();
     if (!isCancelled()) {
-      const calibration = calibratePinch(open.measures, pinched.measures, pinched.extensions);
+      const calibration = calibratePinch(open.measures, pinched.measures, pinched.fists);
       setStep({ kind: 'result', calibration });
     }
   };
@@ -94,7 +94,7 @@ export function CalibrationPanel({ studio }: { studio: Studio }) {
                 {step.calibration.result.openLevel.toFixed(2)}. The pen will go down below{' '}
                 {step.calibration.result.enter.toFixed(2)} and lift above {step.calibration.result.exit.toFixed(2)}.
                 {step.calibration.result.fistBelow === 0 &&
-                  ' Your pinch curls your other fingers like a fist, so a fist won’t pause drawing.'}
+                  ' Your pinch looks like a fist to the tracker, so a fist won’t stop drawing.'}
               </p>
               <div className={styles.actions}>
                 <Button
@@ -126,17 +126,25 @@ export function CalibrationPanel({ studio }: { studio: Studio }) {
   );
 }
 
-/** A one-time offer to calibrate, shown the first time the camera starts. */
+/**
+ * An offer to calibrate when the camera starts: once, if nothing is calibrated; on every
+ * visit if something is, because the saved calibration may be someone else's.
+ */
 export function CalibrationOffer() {
+  const calibrated = useStudioStore((s) => s.calibrated);
   return (
     <Panel as="section" className={styles.offer} aria-label="Calibration offer">
-      <p>Calibrate the pinch for your hand? It takes about 5 seconds.</p>
+      <p>
+        {calibrated
+          ? 'The pinch on this browser is calibrated for one person. Someone new painting? Calibrate for them in about 5 seconds.'
+          : 'Calibrate the pinch for your hand? It takes about 5 seconds.'}
+      </p>
       <div className={styles.actions}>
         <Button className={styles.small} onClick={() => useStudioStore.setState({ calibrationOpen: true })}>
           Calibrate
         </Button>
         <Button variant="secondary" className={styles.small} onClick={markCalibrationOffered}>
-          Not now
+          {calibrated ? 'Keep' : 'Not now'}
         </Button>
       </div>
     </Panel>

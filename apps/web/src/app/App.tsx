@@ -25,7 +25,7 @@ export function App() {
   const phase = useStudioStore((s) => s.phase);
   const inputMode = useStudioStore((s) => s.inputMode);
   const calibrationOpen = useStudioStore((s) => s.calibrationOpen);
-  const offerCalibration = useStudioStore((s) => !s.calibrated && !s.calibrationOffered);
+  const offerCalibration = useStudioStore((s) => (s.calibrated ? !s.recalibrationDismissed : !s.calibrationOffered));
 
   useEffect(() => {
     const canvas = canvasRef.current;

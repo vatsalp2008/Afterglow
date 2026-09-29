@@ -4,7 +4,7 @@
 import {
   calibratePinch,
   DEFAULT_PIPELINE,
-  fingerExtension,
+  readsAsFist,
   replaySession,
   scoreFixture,
   type PipelineConfig,
@@ -25,17 +25,18 @@ describe('calibration on 04-pinch-on-off', () => {
   const open = samples.filter((f) => !inside(f.t)).map((f) => f.hands[0]!.ratio);
   const closed = samples.filter((f) => inside(f.t)).map((f) => f.hands[0]!.ratio);
   const aspect = rec.meta.videoWidth / rec.meta.videoHeight;
-  const closedExtension = rec.frames
+  const closedFist = rec.frames
     .filter((f) => f.hands[0] && inside(f.captureTime) && !near(f.captureTime))
-    .map((f) => fingerExtension(f.hands[0]!.landmarks, aspect));
+    .map((f) => readsAsFist(f.hands[0]!.landmarks, aspect));
 
-  it('finds separable levels, and keeps the fist gate for a pinch with fingers extended', () => {
-    const c = calibratePinch(open, closed, closedExtension);
+  it('finds separable levels, and keeps the fist gate for a pinch that never reads as a fist', () => {
+    expect(closedFist.some(Boolean)).toBe(false);
+    const c = calibratePinch(open, closed, closedFist);
     expect(c.ok && c.result.fistBelow).toBe(DEFAULT_PIPELINE.pinch.fistBelow);
   });
 
   it('reproduces the labeled strokes with calibrated thresholds', () => {
-    const c = calibratePinch(open, closed, closedExtension);
+    const c = calibratePinch(open, closed, closedFist);
     if (!c.ok) throw new Error(c.reason);
     const config: PipelineConfig = { ...DEFAULT_PIPELINE, pinch: { ...DEFAULT_PIPELINE.pinch, ...c.result } };
     const score = scoreFixture('04-pinch-on-off', replaySession(rec, config), label);

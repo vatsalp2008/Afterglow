@@ -8,7 +8,6 @@ import {
   canvasToScreen,
   canvasToView,
   coverFit,
-  fingerExtension,
   frameForAspect,
   HAND_CONNECTIONS,
   HandIdentity,
@@ -17,6 +16,7 @@ import {
   landmarkToView,
   penSample,
   PinchTracker,
+  readsAsFist,
   sampleTimeline,
   screenToCanvas,
   StrokeBuilder,
@@ -80,7 +80,8 @@ interface PenCursor {
 /** What calibration measures of the first visible hand, one entry per frame. */
 export interface CalibrationSamples {
   measures: number[];
-  extensions: number[];
+  /** Whether the hand read as a fist under the default gate. */
+  fists: boolean[];
 }
 
 interface Replay {
@@ -463,7 +464,7 @@ export class Studio {
    * pinch doesn't paint.
    */
   async sampleMeasures(durationMs: number): Promise<CalibrationSamples> {
-    const sink: CalibrationSamples = { measures: [], extensions: [] };
+    const sink: CalibrationSamples = { measures: [], fists: [] };
     this.measureSink = sink;
     this.calibrating = true;
     this.finishTrackedStrokes();
@@ -577,7 +578,7 @@ export class Studio {
       const ratio = tracked.get(first.key)?.ratio;
       if (ratio !== undefined && Number.isFinite(ratio)) {
         this.measureSink.measures.push(ratio);
-        this.measureSink.extensions.push(fingerExtension(first.landmarks, aspect));
+        this.measureSink.fists.push(readsAsFist(first.landmarks, aspect));
       }
     }
     for (const key of this.pens.keys()) if (key !== POINTER_KEY && !tracked.has(key)) this.pens.delete(key);

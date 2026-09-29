@@ -8,7 +8,7 @@ import { DEFAULT_PINCH } from './pinch.ts';
 export interface CalibrationResult {
   enter: number;
   exit: number;
-  /** The fist gate for this user: off (0) when their pinch curls the other fingers. */
+  /** The fist gate for this user: off (0) when their pinch reads as a fist. */
   fistBelow: number;
   /** The low end of the open-hand measure (20th percentile). */
   openLevel: number;
@@ -23,8 +23,8 @@ export type Calibration =
 export const MIN_CALIBRATION_SAMPLES = 15;
 /** Below this gap between open and pinched, thresholds can't be placed reliably. */
 export const MIN_CALIBRATION_GAP = 0.15;
-/** A pinch whose finger extension comes this close to the fist gate turns the gate off. */
-export const FIST_GATE_MARGIN = 0.15;
+/** If more than this share of a user's pinch reads as a fist, the fist gate is turned off for them. */
+export const MAX_FIST_SHARE = 0.1;
 
 function percentile(values: readonly number[], p: number): number {
   const sorted = [...values].sort((a, b) => a - b);
@@ -32,13 +32,13 @@ function percentile(values: readonly number[], p: number): number {
 }
 
 /**
- * `open` and `pinched` are pinch measures from each step; `pinchedExtension` is the
- * finger extension (fingerExtension) during the pinched step, if measured.
+ * `open` and `pinched` are pinch measures from each step; `pinchedFist` says, per sample of
+ * the pinched step, whether the hand read as a fist under the default gate (readsAsFist).
  */
 export function calibratePinch(
   open: readonly number[],
   pinched: readonly number[],
-  pinchedExtension: readonly number[] = [],
+  pinchedFist: readonly boolean[] = [],
 ): Calibration {
   const openSamples = open.filter(Number.isFinite);
   const pinchedSamples = pinched.filter(Number.isFinite);
@@ -51,10 +51,9 @@ export function calibratePinch(
   if (gap < MIN_CALIBRATION_GAP) return { ok: false, reason: 'notSeparable' };
   const enter = Math.min(0.4, pinchedLevel + 0.3 * gap);
   const exit = Math.min(0.6, Math.max(enter + 0.06, pinchedLevel + 0.5 * gap));
-  // Some people pinch with the other fingers curled, as if holding a pen. The fist gate
-  // would read that as a fist and never draw.
-  const extension = pinchedExtension.filter(Number.isFinite);
-  const curled = extension.length > 0 && percentile(extension, 10) < DEFAULT_PINCH.fistBelow + FIST_GATE_MARGIN;
-  const fistBelow = curled ? 0 : DEFAULT_PINCH.fistBelow;
+  // A pinch the fist gate would block (an unusually curled index) turns the gate off
+  // for this user rather than never drawing.
+  const fistShare = pinchedFist.length ? pinchedFist.filter(Boolean).length / pinchedFist.length : 0;
+  const fistBelow = fistShare > MAX_FIST_SHARE ? 0 : DEFAULT_PINCH.fistBelow;
   return { ok: true, result: { enter, exit, fistBelow, openLevel, pinchedLevel } };
 }
