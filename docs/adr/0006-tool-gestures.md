@@ -18,7 +18,7 @@ Recordings `10`–`13` perform them, and the 11 recordings without gestures are 
 
 1. **Poses from finger geometry** (`handShape`, `classifyPose`). Each finger's extension is tip-to-wrist over knuckle-to-wrist, with extended at 1.55 or more and curled at 1.25 or less. Thumb spread and finger fan are measured in palm lengths.
    - **Open palm:** all four fingers extended, thumb spread at least 0.8, fan at least 1.15.
-   - **Fist:** all four fingers curled.
+   - **Fist:** all four fingers curled, the index below 1.1 like the pen's fist gate ([ADR 0005](0005-pinch-detection.md)). The index is what tells a fist from a pinch made with the other fingers curled.
    - **Two fingers:** index and middle extended, ring and little curled.
    - **Frame corner:** index extended and pointing up (at least 55°), the other three curled, thumb spread at least 0.7. A **frame** is two corners with the thumb tips within 1 palm length of each other.
 2. **One state machine for all gestures, driven by an explicit table** (`TOOL_TRANSITIONS`, drawn in [gesture-fsm.md](../gesture-fsm.md)). The states are ready, holding, active and cooling.
