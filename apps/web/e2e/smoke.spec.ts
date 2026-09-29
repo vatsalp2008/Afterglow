@@ -32,6 +32,8 @@ test('explains a camera failure and offers a way forward', async ({ page }) => {
 });
 
 test('erases through a stroke with the mouse, and undoes the erase', async ({ page }) => {
+  // Every mouse move renders a frame, which is slow on CI's software WebGL: few, long moves.
+  test.setTimeout(60_000);
   const errors = collectErrors(page);
   await page.goto('/');
   await page.getByRole('button', { name: 'Paint with a mouse instead' }).click();
@@ -39,13 +41,13 @@ test('erases through a stroke with the mouse, and undoes the erase', async ({ pa
   // A horizontal line, then the eraser dragged down through its middle.
   await page.mouse.move(300, 400);
   await page.mouse.down();
-  for (let i = 1; i <= 30; i++) await page.mouse.move(300 + i * 15, 400);
+  for (let i = 1; i <= 9; i++) await page.mouse.move(300 + i * 50, 400);
   await page.mouse.up();
   await page.getByRole('button', { name: /^Eraser/ }).click();
   await expect(page.getByText('Eraser: drag over lines to erase them')).toBeVisible();
   await page.mouse.move(525, 330);
   await page.mouse.down();
-  for (let i = 1; i <= 14; i++) await page.mouse.move(525, 330 + i * 10);
+  for (let i = 1; i <= 4; i++) await page.mouse.move(525, 330 + i * 35);
   await page.mouse.up();
 
   await page.keyboard.press('h');
