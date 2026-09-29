@@ -2,6 +2,7 @@ import type { BrushId } from '@afterglow/core';
 import {
   BRUSH_COLORS,
   ClearIcon,
+  EraserIcon,
   FadeIcon,
   FixIcon,
   IconButton,
@@ -38,6 +39,7 @@ const Divider = () => <span className={styles.divider} aria-hidden="true" />;
 export function Dock({ studio }: { studio: Studio }) {
   const s = useStudioStore(
     useShallow((st) => ({
+      tool: st.tool,
       brush: st.brush,
       color: st.color,
       size: st.size,
@@ -62,12 +64,19 @@ export function Dock({ studio }: { studio: Studio }) {
           <IconButton
             key={b.id}
             label={`${b.label} (B)`}
-            pressed={s.brush === b.id}
-            onClick={() => set({ brush: b.id })}
+            pressed={s.tool === 'draw' && s.brush === b.id}
+            onClick={() => set({ brush: b.id, tool: 'draw' })}
           >
             {b.icon}
           </IconButton>
         ))}
+        <IconButton
+          label="Eraser: pinch or drag over lines to erase them (E)"
+          pressed={s.tool === 'erase'}
+          onClick={() => set({ tool: s.tool === 'erase' ? 'draw' : 'erase' })}
+        >
+          <EraserIcon />
+        </IconButton>
       </div>
       <Divider />
       <div className={styles.group} role="group" aria-label="Color">
@@ -80,7 +89,7 @@ export function Dock({ studio }: { studio: Studio }) {
             data-tip={`${c.name} (${String(i + 1)})`}
             aria-label={c.name}
             aria-pressed={s.color === c.hex}
-            onClick={() => set({ color: c.hex })}
+            onClick={() => set({ color: c.hex, tool: 'draw' })}
           />
         ))}
       </div>

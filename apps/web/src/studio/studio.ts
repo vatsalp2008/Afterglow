@@ -18,6 +18,7 @@ import {
   PinchTracker,
   sampleTimeline,
   screenToCanvas,
+  eraseStrokes,
   StrokeBuilder,
   ToolGestureTracker,
   viewToCanvas,
@@ -33,6 +34,7 @@ import {
   type StrokeStyle,
   type Timeline,
   type ToolGesture,
+  type Vec2,
   type Viewport,
 } from '@afterglow/core';
 import { LightRenderer } from '@afterglow/render';
@@ -46,7 +48,7 @@ import {
   type HandTracker,
   type TrackerTiming,
 } from '@afterglow/tracking';
-import { SIZES } from '../app/brushes';
+import { ERASER_RADII, SIZES } from '../app/brushes';
 import { showToast, useStudioStore, type StudioState } from '../app/store';
 import { DemoPen } from './demoPen';
 import { download, downloadJson, stamp } from './download';
@@ -102,6 +104,8 @@ export class Studio {
   private filter = new LandmarkFilter(useStudioStore.getState().filter);
   private pinch = new PinchTracker(useStudioStore.getState().pinch);
   private tools = new ToolGestureTracker();
+  /** Erase gestures in progress, per pen: an undo group and the last eraser position (canvas units). */
+  private erasing = new Map<string, { group: string; last: Vec2 }>();
   private tracker: HandTracker | null = null;
   private stream: MediaStream | null = null;
   private videoSize = { width: 0, height: 0 };
@@ -573,8 +577,30 @@ export class Studio {
       }
       if (this.replay || this.mode !== 'studio') continue;
       if (paused && ev.handKey !== POINTER_KEY) continue;
-      this.applyBuild(this.builder.handle(ev, style, this.frame));
+      // The tool is fixed for a whole stroke: switching mid-stroke takes effect on the next one.
+      const erasing =
+        ev.type === 'strokeStart' ? useStudioStore.getState().tool === 'erase' : this.erasing.has(ev.handKey);
+      if (erasing) this.applyErase(ev);
+      else this.applyBuild(this.builder.handle(ev, style, this.frame));
     }
+  }
+
+  /** One erase gesture (pinch or drag) is one undo step. */
+  private applyErase(ev: InputEvent): void {
+    if (ev.type === 'strokeEnd') {
+      this.erasing.delete(ev.handKey);
+      this.liveDirty = true;
+      return;
+    }
+    if (ev.type !== 'strokeStart' && ev.type !== 'strokeMove') return;
+    const at = viewToCanvas(ev.p, this.frame);
+    const session = this.erasing.get(ev.handKey);
+    const group = session?.group ?? newId();
+    const path = session ? [session.last, at] : [at];
+    this.erasing.set(ev.handKey, { group, last: at });
+    const radius = ERASER_RADII[useStudioStore.getState().size];
+    const { removed, added } = eraseStrokes(this.history.strokes, path, radius, newId);
+    this.history.replace(removed, added, group);
   }
 
   private handleGestures(events: InputEvent[]): void {
@@ -773,6 +799,13 @@ export class Studio {
       el.dataset['state'] = pen.state;
       el.style.setProperty('--pen', pen.color);
       el.style.setProperty('--depth', pen.p.depth.toFixed(2));
+      if (pen.state !== 'raw') {
+        // An eraser ring the size of what it erases, while erasing or with the eraser picked.
+        const store = useStudioStore.getState();
+        const erase = this.erasing.has(key) || (pen.state !== 'drawing' && store.tool === 'erase');
+        el.dataset['tool'] = erase ? 'erase' : 'draw';
+        if (erase) el.style.setProperty('--eraser', `${(2 * ERASER_RADII[store.size] * this.fit.scale).toFixed(1)}px`);
+      }
     }
   }
 
@@ -823,7 +856,7 @@ export class Studio {
         skippedFrames: this.skippedFrames,
         hands,
       },
-      drawing: this.builder.activeStrokes().length > 0,
+      drawing: this.builder.activeStrokes().length > 0 || this.erasing.size > 0,
     });
   }
 

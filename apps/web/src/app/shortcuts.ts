@@ -34,12 +34,20 @@ export function useShortcuts(studio: Studio | null): void {
       const colorIndex = Number(key) - 1;
       const color = BRUSH_COLORS[colorIndex];
       if (color) {
-        set({ color: color.hex });
+        set({ color: color.hex, tool: 'draw' });
         return;
       }
       switch (key) {
         case 'b':
-          set({ brush: BRUSH_ORDER[(BRUSH_ORDER.indexOf(s.brush) + 1) % BRUSH_ORDER.length]! });
+          // Back from the eraser, B returns to the current brush before cycling.
+          set(
+            s.tool === 'erase'
+              ? { tool: 'draw' }
+              : { brush: BRUSH_ORDER[(BRUSH_ORDER.indexOf(s.brush) + 1) % BRUSH_ORDER.length]! },
+          );
+          break;
+        case 'e':
+          set({ tool: s.tool === 'erase' ? 'draw' : 'erase' });
           break;
         case '[':
           set({ size: SIZE_ORDER[Math.max(0, SIZE_ORDER.indexOf(s.size) - 1)]! });

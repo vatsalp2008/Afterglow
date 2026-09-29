@@ -37,6 +37,13 @@ export const InkIcon = () => (
   </Icon>
 );
 
+export const EraserIcon = () => (
+  <Icon>
+    <path d="M8.4 16.5 3.9 12a1.6 1.6 0 0 1 0-2.3l6.1-6.1a1.6 1.6 0 0 1 2.3 0l4.1 4.1a1.6 1.6 0 0 1 0 2.3l-6.8 6.5z" />
+    <path d="M6.6 7.1l6.3 6.3M8.4 16.5h8.1" />
+  </Icon>
+);
+
 export const FadeIcon = () => (
   <Icon>
     <path d="M10 3a7 7 0 0 0 0 14" />

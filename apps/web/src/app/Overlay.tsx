@@ -14,6 +14,7 @@ export function Hint() {
       recordingVideo: st.recordingVideo,
       session: st.session,
       paused: st.paused,
+      tool: st.tool,
     })),
   );
   let text: string | null = null;
@@ -22,6 +23,11 @@ export function Hint() {
   else if (s.replaying)
     text = s.recordingVideo ? 'Recording your timelapse' : 'Replaying your session. Press Esc to stop.';
   else if (s.paused && s.inputMode !== 'pointer') text = 'Hand drawing paused. Make a fist or press P to resume.';
+  else if (s.tool === 'erase')
+    text =
+      s.inputMode === 'pointer'
+        ? 'Eraser: drag over lines to erase them. Press E to draw again.'
+        : 'Eraser: pinch and move over lines to erase them. Press E to draw again.';
   else if (s.inputMode === 'fixture') text = 'Replaying a recorded hand session';
   else if (!s.hasDrawn && s.inputMode === 'camera')
     text = s.handCount === 0 ? 'Raise a hand so the camera can see it' : 'Pinch your thumb and index finger to draw';

@@ -75,6 +75,20 @@ button {
   opacity: 0.9;
 }
 
+.pen-cursor[data-tool='erase']::before {
+  width: var(--eraser);
+  height: var(--eraser);
+  border: 1.5px solid rgba(233, 236, 245, 0.75);
+  background: rgba(233, 236, 245, 0.04);
+  box-shadow: none;
+  opacity: 0.9;
+}
+
+.pen-cursor[data-tool='erase'][data-state='drawing']::before {
+  border-color: #fff;
+  background: rgba(233, 236, 245, 0.14);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pen-cursor::before {
     transition: none;

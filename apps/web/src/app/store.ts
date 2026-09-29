@@ -60,6 +60,8 @@ export interface StudioState {
   loadingMessage: string | null;
   error: StartError | null;
 
+  /** Drawing with the brush, or erasing what the pen passes over. */
+  tool: 'draw' | 'erase';
   brush: BrushId;
   color: string;
   size: SizeId;
@@ -104,10 +106,12 @@ export const useStudioStore = create<StudioState>()(() => ({
   loadingMessage: null,
   error: null,
 
+  tool: 'draw',
   brush: 'neon',
   color: PALETTE.sodium,
   size: 'm',
-  fade: !reducedMotion,
+  // Strokes stay unless fading is switched on (F).
+  fade: false,
   darkroom: true,
 
   hudOpen: false,
