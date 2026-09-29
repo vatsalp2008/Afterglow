@@ -10,6 +10,7 @@ export * from './hand.ts';
 export * from './history.ts';
 export * from './stroke/catmullRom.ts';
 export * from './stroke/strokeBuilder.ts';
+export * from './stroke/eraser.ts';
 export * from './timeline.ts';
 export * from './types.ts';
 export * from './session.ts';
