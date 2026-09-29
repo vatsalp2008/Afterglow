@@ -1,6 +1,6 @@
 # 0005: Pinch detection: fingertip-pad measure, fist gate, tuned hysteresis, rejoin window
 
-- Status: accepted; revised after recordings 09–15 (see [Revision](#revision-recordings-0915)) and after testing with other people (see [Second revision](#second-revision-other-people))
+- Status: accepted; revised after recordings 09–15 (see [Revision](#revision-recordings-0915)) and after testing with other people (see [Second revision](#second-revision-other-people)). The thresholds and calibration (decisions 4 and 7) are superseded by [ADR 0007](0007-no-calibration.md).
 - Date: 2026-09-28
 
 ## Context
@@ -18,10 +18,10 @@ Counting strokes turned out to be misleading, so fixtures were labeled with pinc
 1. **Pinch measure: `min(tipRatio, 1.2 × padRatio)`.** The pad ratio is the thumb tip's distance to the index finger's last segment (landmarks 7 to 8), relative to palm length. A thumb pressed on the fingertip pad reads as pinched even when the two tip landmarks sit apart.
 2. **A fist gate** (`readsAsFist`). A hand whose fingers are all curled, the index included, is a fist, and never counts as a pinch. In a fist the thumb genuinely presses on the index finger, so no distance measure can tell a fist from a pinch. Curl is tip-to-wrist over knuckle-to-wrist. The middle, ring, and little fingers must all read below 1.4, and the index below 1.1.
 3. **A hand with more than 8 of its 21 landmarks outside the frame can't pinch.** MediaPipe guesses the hidden part.
-4. **Hysteresis:** start below 0.24 (2 frames); release above 0.38 for 100 ms (and at least 2 frames). The release is timed rather than counted because the recordings run at 19 to 30 fps.
+4. **Hysteresis:** start below 0.24 (2 frames); release above 0.38 for 100 ms (and at least 2 frames). The release is timed rather than counted because the recordings run at 19 to 30 fps. _Superseded: 0.30 (3 frames) and 0.40, chosen for hands other than the author's ([ADR 0007](0007-no-calibration.md))._
 5. **A 250 ms rejoin window:** after a release the pen lifts immediately, but closing again within 250 ms continues the same stroke. This recovers coverage that strict thresholds lose, without breaking strokes.
 6. **An explicit transition table** (`PEN_TRANSITIONS`) that the state machine executes directly. `docs/gesture-fsm.md` is generated from it, and CI fails if the doc is stale.
-7. **Per-user calibration** (`calibratePinch`): 2 s of open hand and 2 s of pinch set the thresholds. It refuses when open and pinched can't be told apart, rather than guessing. If more than 10% of the person's pinch reads as a fist, it turns the fist gate off for them. Calibrating from `04`'s own data reproduces its 7 strokes. A calibration is saved per browser but belongs to one person, so when one is saved, the studio asks on every visit whether someone new is painting.
+7. **Per-user calibration** (`calibratePinch`): 2 s of open hand and 2 s of pinch set the thresholds. It refuses when open and pinched can't be told apart, rather than guessing. If more than 10% of the person's pinch reads as a fist, it turns the fist gate off for them. Calibrating from `04`'s own data reproduces its 7 strokes. _Superseded: calibration is removed ([ADR 0007](0007-no-calibration.md))._
 8. **One Euro (0.3, 16) smoothing**: 0.24 px jitter on a still hand against 0.44 px raw, for 20 ms of lag.
 
 ## Evidence
@@ -92,4 +92,4 @@ In world space a rotated pinch is indistinguishable from a relaxed hand. So the 
 
 - All of the recordings come from one person. The second revision below is what that cost.
 - Pen-up latency after a release is about 267 ms at the median on `04`. Part of that is definitional: the label marks the release at a fingertip ratio of 0.3, but the release threshold is 0.38.
-- The thresholds were tuned on one person's hand and camera. Calibration, which is offered on first camera use, is how they generalize. More recordings from other people would make the defaults more trustworthy.
+- The thresholds were tuned on one person's hand and camera. [ADR 0007](0007-no-calibration.md) replaces calibration with thresholds chosen to suit other hands; recordings from other people would make them more trustworthy.

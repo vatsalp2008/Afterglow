@@ -104,7 +104,7 @@ That's a small dataset, so treat the numbers as a regression baseline, not a pop
 
 - identity by position;
 - the fingertip-pad pinch measure and the fist gate;
-- 0.24/0.38, with a 100 ms release and a 250 ms rejoin window;
+- the same thresholds for everyone, with no calibration: start below 0.30 for 3 frames, release above 0.40 for 100 ms, and a 250 ms rejoin window ([ADR 0007](adr/0007-no-calibration.md));
 - One Euro (0.3, 16).
 
 Recordings that pinch:
@@ -113,13 +113,13 @@ Recordings that pinch:
 | ---------------------- | ------- | --------------- | -------------- | --------------- | -------------- | ----------------- |
 | `02-slow-circles`      | 1       | 1               | 0.99           | 1               | 0.99           | 1.00              |
 | `03-fast-zigzag`       | 1       | 7               | 0.79           | **1**           | **0.97**       | 1.00              |
-| `04-pinch-on-off`      | 7       | 7               | 0.89           | 7               | 0.89           | 0.82              |
+| `04-pinch-on-off`      | 7       | 7               | 0.89           | 7               | 0.88           | 0.82              |
 | `05-hand-leaves-frame` | 2       | 3               | –              | **2**           | –              | –                 |
 | `06-two-hands`         | 2 hands | 5 (2 hands)     | –              | 4 (2 hands)     | –              | –                 |
 | `07-low-light`         | 1       | 0               | 0.00           | 0               | 0.00           | –                 |
-| `08-rotated-hand`      | 1       | 4               | 0.38           | 4               | 0.42           | 1.00              |
-| `14-low-light-2`       | 1       | 3               | 0.57           | 2               | **0.88**       | 1.00              |
-| `15-rotated-hand-2`    | 1       | 1               | 0.25           | 1               | 0.25           | 1.00              |
+| `08-rotated-hand`      | 1       | 4               | 0.38           | 3               | 0.47           | 1.00              |
+| `14-low-light-2`       | 1       | 3               | 0.57           | **1**           | **0.95**       | 1.00              |
+| `15-rotated-hand-2`    | 1       | 1               | 0.25           | 1               | 0.26           | 1.00              |
 
 Recordings that never pinch. The pen should never go down. "Milestone A" is the first Phase 2 pipeline, which measured the thumb against two finger segments.
 
@@ -134,37 +134,36 @@ Recordings that never pinch. The pen should never go down. "Milestone A" is the 
 
 | Summary                                                     | Phase 1 | Current   |
 | ----------------------------------------------------------- | ------- | --------- |
-| Mean pen-state F1 (13 labeled fixtures)                     | 0.727   | **0.828** |
-| Broken strokes per minute of pinching, all held pinches     | 10.6    | **3.9**   |
-| Broken strokes per minute, clean fixtures (`02`–`04`, `14`) | 15.3    | **1.9**   |
+| Mean pen-state F1 (13 labeled fixtures)                     | 0.727   | **0.835** |
+| Broken strokes per minute of pinching, all held pinches     | 10.6    | **1.9**   |
+| Broken strokes per minute, clean fixtures (`02`–`04`, `14`) | 15.3    | **0.0**   |
 | Pen-down time on the fixtures that never pinch              | 3.7 s   | **0 s**   |
 
 What changed, and what didn't:
 
 - **Fast motion is fixed.** `03` draws as one stroke covering 97% of the pinch.
 - **Nothing that isn't a pinch draws**, including a fist, where the thumb genuinely presses on the index finger.
-- **The second low-light take works**: `14` draws 88% of the pinch, with one break where the pinch loosens for about 650 ms. The first take, `07`, draws nothing: its thumb pressed the side of the finger, which looks like a relaxed hand (ADR 0005).
-- **Rotation is the largest gap** (25–42% coverage). MediaPipe's world landmarks don't help; ADR 0005 has the numbers.
+- **The second low-light take works**: `14` draws as one stroke covering 95% of the pinch. The first take, `07`, draws nothing: its thumb pressed the side of the finger, which looks like a relaxed hand (ADR 0005).
+- **Rotation is the largest gap** (26–47% coverage). MediaPipe's world landmarks don't help; ADR 0005 has the numbers.
 
 These gaps are tracked as expected failures in the golden tests.
 
 ### Pinch parameters
 
-The sweep covers 3,264 configurations. It ranks them by stroke-count errors, then by mean F1. A correct count whose strokes cover less than half the pinch still counts as an error: one short stroke isn't the stroke the user drew. Without that rule, the sweep preferred thresholds that avoid breaks only by drawing less, for example `08` as one stroke covering 11%.
+The sweep covers 2,496 configurations: start thresholds from 0.18 to 0.36, with 2 or 3 frames to start, and release thresholds from 0.35 to 0.45. It ranks them by stroke-count errors, then by mean F1. A correct count whose strokes cover less than half the pinch still counts as an error: one short stroke isn't the stroke the user drew. Without that rule, the sweep preferred thresholds that avoid breaks only by drawing less, for example `08` as one stroke covering 11%.
 
 Fewer errors and more coverage still pull against each other, so the sweep also prints the tradeoff front, the best mean F1 at each error count:
 
-| Start | Release | Release timing | Rejoin | Errors | Mean F1         |
-| ----- | ------- | -------------- | ------ | ------ | --------------- |
-| 0.16  | 0.35    | 4 frames       | 400 ms | 3      | 0.780           |
-| 0.18  | 0.40    | 150 ms         | 150 ms | 4      | 0.802           |
-| 0.25  | 0.45    | 66 ms          | none   | 5      | 0.837           |
-| 0.25  | 0.50    | 150 ms         | 400 ms | 6      | 0.838           |
-| 0.24  | 0.38    | 100 ms         | 250 ms | 6      | 0.828 (current) |
+| Start | Frames to start | Release | Release timing | Rejoin | Errors | Mean F1         |
+| ----- | --------------- | ------- | -------------- | ------ | ------ | --------------- |
+| 0.18  | 3               | 0.42    | 4 frames       | none   | 3      | 0.797           |
+| 0.27  | 2               | 0.45    | 100 ms         | 400 ms | 4      | 0.838           |
+| 0.30  | 3               | 0.40    | 100 ms         | 250 ms | 4      | 0.835 (current) |
 
-- **The start threshold is the lever.** A lower threshold avoids `14`'s break only because the pen never comes back after the loosened pinch. So the defaults keep 0.24.
-- **Release above 0.40 merges two of `04`'s pinches.** That's why the front rows at 0.45 and 0.50 score a higher F1 than the defaults and still aren't used: a user's separate strokes join.
-- **A 100 ms release** gets `03` right where 3 frames doesn't, and it doesn't depend on frame rate.
+- **The defaults are chosen for other people's hands, not for the highest score** ([ADR 0007](adr/0007-no-calibration.md)). The start threshold is as loose as the recordings allow: at 0.30 a relaxed or open hand never draws, and neither does a hand closing into a fist, as long as the pen waits for 3 frames.
+- **The 3-error row starts at 0.18**, well inside the recording author's own pinch range. That's the kind of fit that left other people unable to draw.
+- **Release above 0.40 merges two of `04`'s pinches.** That's why the 0.45 row isn't used even though it scores higher: a user's separate strokes would join.
+- **A 100 ms release** gets `03` right where a 3-frame release doesn't, and it doesn't depend on frame rate.
 
 ### Tool gestures
 
