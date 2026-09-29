@@ -40,10 +40,17 @@ export interface PinchConfig {
    */
   segmentWeight: number;
   /**
-   * A hand whose middle, ring, and little fingers are all curled below this extension
-   * is a fist, not a pinch (0 disables); see fingerExtension.
+   * A hand whose middle, ring, and little fingers are all curled below this extension,
+   * and whose index is curled below fistIndexBelow, is a fist, not a pinch (0 disables);
+   * see readsAsFist.
    */
   fistBelow: number;
+  fistIndexBelow: number;
+  /**
+   * A hand with more landmarks than this outside the frame can't pinch: MediaPipe
+   * guesses the hidden part (fixture 05), and no real pinch had even one outside.
+   */
+  maxOutside: number;
 }
 
 // Tuned on the recorded fixtures with the evaluation harness (ADR 0005). The release is
@@ -59,6 +66,8 @@ export const DEFAULT_PINCH: PinchConfig = {
   neutralPalm: 0.18,
   segmentWeight: 1.2,
   fistBelow: 1.4,
+  fistIndexBelow: 1.1,
+  maxOutside: 8,
 };
 
 // ---- measures --------------------------------------------------------------
@@ -99,6 +108,25 @@ export function pinchMeasure(landmarks: readonly Vec3[], aspect: number, segment
 export function fingerExtension(landmarks: readonly Vec3[], aspect: number): number {
   const u = landmarks.map((p) => toUnits(p, aspect));
   return Math.max(extension(u, 12, 9), extension(u, 16, 13), extension(u, 20, 17));
+}
+
+/**
+ * Whether a hand reads as a fist, which never counts as a pinch. In a fist the thumb
+ * genuinely presses on the index finger, so pinch measures read closed (fixture 11).
+ *
+ * The other three fingers alone aren't enough: many people pinch with them curled, and
+ * those pinches read as fists and never drew. The index is what tells them apart,
+ * because in any pinch it reaches out to the thumb: at least 1.02 extension in 99% of
+ * pinched frames, against 0.85 in a held fist (ADR 0005).
+ */
+export function readsAsFist(
+  landmarks: readonly Vec3[],
+  aspect: number,
+  config: Pick<PinchConfig, 'fistBelow' | 'fistIndexBelow'> = DEFAULT_PINCH,
+): boolean {
+  if (config.fistBelow <= 0) return false;
+  const u = landmarks.map((p) => toUnits(p, aspect));
+  return extension(u, 8, 5) < config.fistIndexBelow && fingerExtension(landmarks, aspect) < config.fistBelow;
 }
 
 /** Apparent palm length in frame-height units: a proxy for distance to the camera. */
@@ -235,13 +263,14 @@ export class PinchTracker {
   update(frame: HandFrame, aspect: number): InputEvent[] {
     const events: InputEvent[] = [];
     const t = frame.captureTime;
-    const { enter, exit, neutralPalm, segmentWeight, fistBelow } = this.config;
+    const { enter, exit, neutralPalm, segmentWeight } = this.config;
     const seen = new Set<HandKey>();
 
     for (const hand of frame.hands) {
       seen.add(hand.key);
       const ratio = pinchMeasure(hand.landmarks, aspect, segmentWeight);
-      const fist = fistBelow > 0 && fingerExtension(hand.landmarks, aspect) < fistBelow;
+      const fist = readsAsFist(hand.landmarks, aspect, this.config);
+      const outside = hand.landmarks.filter((q) => q.x < 0 || q.x > 1 || q.y < 0 || q.y > 1).length;
       const p = penSample(hand.landmarks, aspect, neutralPalm);
       let h = this.hands.get(hand.key);
       if (!h) {
@@ -251,7 +280,8 @@ export class PinchTracker {
       h.missing = 0;
       h.ratio = ratio;
       h.fist = fist;
-      const input: PenInput = fist || ratio > exit ? 'open' : ratio < enter ? 'closed' : 'between';
+      const input: PenInput =
+        fist || outside > this.config.maxOutside || ratio > exit ? 'open' : ratio < enter ? 'closed' : 'between';
       this.step(hand.key, h, input, t, p, events);
     }
 

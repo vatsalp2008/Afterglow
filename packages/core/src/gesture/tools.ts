@@ -24,6 +24,11 @@ export interface ToolGestureConfig {
   extended: number;
   /** ...and curled at or below this one. */
   curled: number;
+  /**
+   * A fist's index must be curled below this, as for the pen's fist gate: in a pinch the
+   * index reaches out to the thumb even when the other fingers curl.
+   */
+  fistIndex: number;
   /** Open palm: minimum thumb spread and finger fan, in palm lengths. */
   palmThumbSpread: number;
   palmFan: number;
@@ -66,6 +71,7 @@ export interface ToolGestureConfig {
 export const DEFAULT_TOOL_GESTURES: ToolGestureConfig = {
   extended: 1.55,
   curled: 1.25,
+  fistIndex: 1.1,
   palmThumbSpread: 0.8,
   palmFan: 1.15,
   frameThumbSpread: 0.7,
@@ -126,7 +132,7 @@ export function classifyPose(s: HandShape, c: ToolGestureConfig = DEFAULT_TOOL_G
   if (ext(s.index) && others.every(ext) && s.thumbSpread >= c.palmThumbSpread && s.fan >= c.palmFan) {
     return 'openPalm';
   }
-  if (curl(s.index) && others.every(curl)) return 'fist';
+  if (s.index < c.fistIndex && others.every(curl)) return 'fist';
   if (ext(s.index) && ext(s.middle) && curl(s.ring) && curl(s.little)) return 'twoFingers';
   if (ext(s.index) && others.every(curl) && s.thumbSpread >= c.frameThumbSpread && s.indexRise >= c.frameIndexRise) {
     return 'frameCorner';

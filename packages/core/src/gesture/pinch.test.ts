@@ -9,6 +9,7 @@ import {
   pinchMeasure,
   pinchRatio,
   PinchTracker,
+  readsAsFist,
   type PenFsmState,
   type PenInput,
   type PinchConfig,
@@ -29,11 +30,27 @@ function hand(r: number): Vec3[] {
   return lm;
 }
 
-function fist(): Vec3[] {
+// A pinch with the middle, ring, and little fingers curled, as if holding a pen. The index
+// still reaches out to the thumb (extension 1.5).
+function penGrip(): Vec3[] {
   const lm = hand(0.1);
   for (const tip of [12, 16, 20]) lm[tip] = { x: 0.5, y: 0.55, z: 0 }; // curled back toward the palm
   return lm;
 }
+
+// A fist: every finger curled, the thumb pressed on the curled index (so it reads closed).
+function fist(): Vec3[] {
+  const lm = penGrip();
+  lm[8] = { x: 0.51, y: 0.6, z: 0 }; // index tip half the knuckle's distance from the wrist
+  lm[4] = { x: 0.49, y: 0.6, z: 0 };
+  return lm;
+}
+
+const frame = (i: number, landmarks: Vec3[]): HandFrame => ({
+  frameId: i,
+  captureTime: i * 33,
+  hands: [{ key: 'R', handedness: 'Right', score: 1, landmarks }],
+});
 
 // Mechanics are tested against a fixed configuration, independent of the tuned defaults.
 const LEGACY: PinchConfig = {
@@ -207,6 +224,33 @@ describe('PinchTracker', () => {
       ),
     );
     expect(evs.filter((e) => e.type === 'strokeEnd')).toEqual([expect.objectContaining({ reason: 'release' })]);
+  });
+
+  it('reads a fist as a fist, but not a pinch with the other fingers curled', () => {
+    expect(readsAsFist(fist(), 1)).toBe(true);
+    expect(readsAsFist(penGrip(), 1)).toBe(false);
+    expect(readsAsFist(hand(0.1), 1)).toBe(false);
+    expect(readsAsFist(fist(), 1, { fistBelow: 0, fistIndexBelow: 1.1 })).toBe(false);
+  });
+
+  it('draws a pinch made with the other fingers curled', () => {
+    const tracker = new PinchTracker(LEGACY);
+    const evs = [0, 1, 2].flatMap((i) => tracker.update(frame(i, penGrip()), 1));
+    expect(evs.filter((e) => e.type === 'strokeStart')).toHaveLength(1);
+  });
+
+  it("won't start a stroke from a hand mostly outside the frame", () => {
+    const off = hand(0.1).map((q) => ({ ...q, x: q.x + 0.52 })); // all but the thumb tip past the right edge
+    expect(off.filter((q) => q.x > 1).length).toBeGreaterThan(DEFAULT_PINCH.maxOutside);
+    const tracker = new PinchTracker(LEGACY);
+    expect([0, 1, 2].flatMap((i) => tracker.update(frame(i, off), 1)).some((e) => e.type === 'strokeStart')).toBe(
+      false,
+    );
+    // A hand with only its wrist out of view still draws.
+    const low = hand(0.1);
+    low[0] = { x: 0.5, y: 1.02, z: 0 };
+    const t2 = new PinchTracker({ ...LEGACY });
+    expect([0, 1, 2].flatMap((i) => t2.update(frame(i, low), 1)).some((e) => e.type === 'strokeStart')).toBe(true);
   });
 
   it('lets a fist pinch when the gate is disabled', () => {
