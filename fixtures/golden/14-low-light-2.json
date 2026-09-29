@@ -3,12 +3,6 @@
     {
       "hand": "hand-1",
       "startMs": 3267,
-      "endMs": 8643,
-      "end": "release"
-    },
-    {
-      "hand": "hand-1",
-      "startMs": 9077,
       "endMs": 9911,
       "end": "handLost"
     }
@@ -16,6 +10,6 @@
   "gestures": [],
   "penState": {
     "precision": 1,
-    "recall": 0.881
+    "recall": 0.951
   }
 }

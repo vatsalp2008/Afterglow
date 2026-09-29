@@ -226,7 +226,8 @@ describe('replaySession', () => {
     const r = replaySession(rec, DEFAULT_PIPELINE);
     expect(strokeCount(r)).toBe(1);
     expect(r.events[r.events.length - 1]).toMatchObject({ type: 'strokeEnd', handKey: 'hand-1', t: 297 });
-    expect(r.frames.filter((f) => f.drawing)).toHaveLength(9);
+    // The pen goes down on the third closed frame.
+    expect(r.frames.filter((f) => f.drawing)).toHaveLength(8);
     expect(r.durationMs).toBe(297);
   });
 

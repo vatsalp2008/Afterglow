@@ -8,19 +8,13 @@
     },
     {
       "hand": "hand-1",
-      "startMs": 2552,
-      "endMs": 4025,
+      "startMs": 2512,
+      "endMs": 5193,
       "end": "release"
     },
     {
       "hand": "hand-1",
-      "startMs": 4328,
-      "endMs": 5149,
-      "end": "release"
-    },
-    {
-      "hand": "hand-1",
-      "startMs": 9388,
+      "startMs": 9431,
       "endMs": 11378,
       "end": "release"
     }
@@ -28,6 +22,6 @@
   "gestures": [],
   "penState": {
     "precision": 1,
-    "recall": 0.419
+    "recall": 0.471
   }
 }

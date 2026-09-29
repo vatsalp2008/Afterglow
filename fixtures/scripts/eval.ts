@@ -116,19 +116,22 @@ function better(a: Summary, b: Summary): number {
   );
 }
 
+const ENTERS = [0.18, 0.21, 0.24, 0.27, 0.3, 0.33, 0.36];
+const EXITS = [0.35, 0.38, 0.4, 0.42, 0.45];
+
 function tune(): void {
   const grid: PinchConfig[] = [];
-  for (const segmentWeight of [0, 1.2, 1.6, 2]) {
-    for (const enter of [0.12, 0.14, 0.16, 0.18, 0.2, 0.22, 0.25]) {
-      for (const exit of [0.3, 0.35, 0.4, 0.45, 0.5]) {
+  // Weights 1.6 and 2 never beat 1.2 in earlier sweeps (ADR 0005), so they're left out.
+  for (const segmentWeight of [0, 1.2]) {
+    for (const enter of ENTERS) {
+      for (const exit of EXITS) {
         if (exit < enter + 0.08) continue;
-        for (const rejoinMs of [0, 150, 250, 400]) {
-          for (const exitFrames of [2, 3, 4]) {
-            grid.push({ ...DEFAULT_PIPELINE.pinch, segmentWeight, enter, exit, exitFrames, exitMs: 0, rejoinMs });
-          }
-          // Time-based release instead of a frame count.
-          for (const exitMs of [66, 100, 150]) {
-            grid.push({ ...DEFAULT_PIPELINE.pinch, segmentWeight, enter, exit, exitFrames: 1, exitMs, rejoinMs });
+        for (const enterFrames of [2, 3]) {
+          for (const rejoinMs of [0, 150, 250, 400]) {
+            const base = { ...DEFAULT_PIPELINE.pinch, segmentWeight, enter, exit, enterFrames, rejoinMs };
+            for (const exitFrames of [2, 3, 4]) grid.push({ ...base, exitFrames, exitMs: 0 });
+            // Time-based release instead of a frame count.
+            for (const exitMs of [66, 100, 150]) grid.push({ ...base, exitFrames: 1, exitMs });
           }
         }
       }
@@ -136,11 +139,12 @@ function tune(): void {
   }
   const results = grid.map((pinch) => ({ pinch, summary: scoreAll({ ...DEFAULT_PIPELINE, pinch }).summary }));
   results.sort((a, b) => better(a.summary, b.summary));
-  const key = (p: PinchConfig) => [p.segmentWeight, p.enter, p.exit, p.exitFrames, p.exitMs, p.rejoinMs].join('|');
+  const key = (p: PinchConfig) =>
+    [p.segmentWeight, p.enter, p.exit, p.enterFrames, p.exitFrames, p.exitMs, p.rejoinMs].join('|');
   const byKey = new Map(results.map((r) => [key(r.pinch), r.summary]));
   // Stability: how many grid neighbors (one step in enter or exit) are just as good on errors.
-  const enters = [0.12, 0.14, 0.16, 0.18, 0.2, 0.22, 0.25];
-  const exits = [0.3, 0.35, 0.4, 0.45, 0.5];
+  const enters = ENTERS;
+  const exits = EXITS;
   const stability = (p: PinchConfig, s: Summary): string => {
     const ie = enters.indexOf(p.enter);
     const ix = exits.indexOf(p.exit);
@@ -167,10 +171,10 @@ function tune(): void {
   const row = ({ pinch, summary }: { pinch: PinchConfig; summary: Summary }) => {
     const release = pinch.exitMs > 0 ? `${String(pinch.exitMs)}ms` : `${String(pinch.exitFrames)} frames`;
     console.log(
-      `${String(pinch.segmentWeight).padStart(7)}  ${pinch.enter.toFixed(2)}  ${pinch.exit.toFixed(2)}  ${release.padEnd(10)}  ${String(pinch.rejoinMs).padStart(6)}  ${String(errors(summary)).padStart(6)}  ${summary.meanF1.toFixed(3).padStart(7)}  ${summary.minRecall.toFixed(2).padStart(10)}  ${ms(summary.releaseMs)}  ${stability(pinch, summary).padStart(6)}`,
+      `${String(pinch.segmentWeight).padStart(7)}  ${pinch.enter.toFixed(2)}  ${String(pinch.enterFrames).padStart(6)}  ${pinch.exit.toFixed(2)}  ${release.padEnd(10)}  ${String(pinch.rejoinMs).padStart(6)}  ${String(errors(summary)).padStart(6)}  ${summary.meanF1.toFixed(3).padStart(7)}  ${summary.minRecall.toFixed(2).padStart(10)}  ${ms(summary.releaseMs)}  ${stability(pinch, summary).padStart(6)}`,
     );
   };
-  const header = 'segment  enter  exit  release     rejoin  errors  mean F1  min recall  pen-up  stable';
+  const header = 'segment  enter  frames  exit  release     rejoin  errors  mean F1  min recall  pen-up  stable';
   console.log(`${String(grid.length)} configurations, best first (stable = neighbors with equally few errors)\n`);
   console.log(header);
   results.slice(0, 20).forEach(row);
@@ -185,9 +189,11 @@ function tune(): void {
     enter: 0.25,
     exit: 0.35,
     exitFrames: 2,
+    enterFrames: 2,
     exitMs: 0,
     rejoinMs: 0,
     fistBelow: 0,
+    maxOutside: 21,
   };
   for (const [label, pinch] of [
     ['Defaults', DEFAULT_PIPELINE.pinch],

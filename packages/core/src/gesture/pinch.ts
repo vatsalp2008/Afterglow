@@ -53,12 +53,14 @@ export interface PinchConfig {
   maxOutside: number;
 }
 
-// Tuned on the recorded fixtures with the evaluation harness (ADR 0005). The release is
-// timed, not counted: the recordings run at 19 to 30 fps.
+// The same for everyone: there is no per-person calibration (ADR 0007). The start
+// threshold is as loose as the recordings allow, midway between pinched and open hands
+// rather than fitted to one person's pinch. The release is timed, not counted: the
+// recordings run at 19 to 30 fps.
 export const DEFAULT_PINCH: PinchConfig = {
-  enter: 0.24,
-  exit: 0.38,
-  enterFrames: 2,
+  enter: 0.3,
+  exit: 0.4,
+  enterFrames: 3,
   exitFrames: 2,
   exitMs: 100,
   rejoinMs: 250,

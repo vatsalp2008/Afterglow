@@ -2,7 +2,7 @@
   "strokes": [
     {
       "hand": "hand-1",
-      "startMs": 1255,
+      "startMs": 1212,
       "endMs": 4281,
       "end": "release"
     }
@@ -10,6 +10,6 @@
   "gestures": [],
   "penState": {
     "precision": 1,
-    "recall": 0.254
+    "recall": 0.258
   }
 }

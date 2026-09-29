@@ -2,13 +2,13 @@
   "strokes": [
     {
       "hand": "hand-1",
-      "startMs": 934,
-      "endMs": 5036,
+      "startMs": 966,
+      "endMs": 5136,
       "end": "release"
     },
     {
       "hand": "hand-2",
-      "startMs": 5036,
+      "startMs": 5068,
       "endMs": 7304,
       "end": "release"
     },
