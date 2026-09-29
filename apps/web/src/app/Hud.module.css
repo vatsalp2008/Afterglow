@@ -153,24 +153,3 @@
   font-size: 12px;
   line-height: 1.5;
 }
-
-.calibrate {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.calibrate button {
-  padding: 5px 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--paper);
-  font: inherit;
-  font-size: 12.5px;
-  cursor: pointer;
-}
-
-.calibrate button:hover {
-  border-color: rgba(138, 147, 184, 0.5);
-}

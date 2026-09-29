@@ -16,7 +16,6 @@ import {
   landmarkToView,
   penSample,
   PinchTracker,
-  readsAsFist,
   sampleTimeline,
   screenToCanvas,
   StrokeBuilder,
@@ -77,13 +76,6 @@ interface PenCursor {
   color: string;
 }
 
-/** What calibration measures of the first visible hand, one entry per frame. */
-export interface CalibrationSamples {
-  measures: number[];
-  /** Whether the hand read as a fist under the default gate. */
-  fists: boolean[];
-}
-
 interface Replay {
   timeline: Timeline;
   startedAt: number;
@@ -132,8 +124,6 @@ export class Studio {
   private session = new SessionCapture();
   private bench: BenchCollector | null = null;
   private benchRunning = false;
-  private measureSink: CalibrationSamples | null = null;
-  private calibrating = false;
   private clearArmedUntil = 0;
   private pointerActive = false;
 
@@ -458,27 +448,6 @@ export class Studio {
     showToast(`Saved ${fileName} (${String(recording.frames.length)} frames)`);
   }
 
-  /**
-   * Collects the pinch measure and finger extension of the first visible hand for
-   * `durationMs`, for calibration. Drawing is suppressed meanwhile, so the calibration
-   * pinch doesn't paint.
-   */
-  async sampleMeasures(durationMs: number): Promise<CalibrationSamples> {
-    const sink: CalibrationSamples = { measures: [], fists: [] };
-    this.measureSink = sink;
-    this.calibrating = true;
-    this.finishTrackedStrokes();
-    await sleep(durationMs);
-    if (this.measureSink === sink) this.measureSink = null;
-    return sink;
-  }
-
-  endCalibration(): void {
-    this.measureSink = null;
-    this.calibrating = false;
-    this.finishTrackedStrokes();
-  }
-
   cancelSession(): void {
     this.session.cancel();
     useStudioStore.setState({ session: null });
@@ -573,14 +542,6 @@ export class Studio {
 
     const tracked = this.pinch.status();
     this.handleGestures(this.tools.update(filtered, aspect, tracked));
-    const first = filtered.hands[0];
-    if (this.measureSink && first) {
-      const ratio = tracked.get(first.key)?.ratio;
-      if (ratio !== undefined && Number.isFinite(ratio)) {
-        this.measureSink.measures.push(ratio);
-        this.measureSink.fists.push(readsAsFist(first.landmarks, aspect));
-      }
-    }
     for (const key of this.pens.keys()) if (key !== POINTER_KEY && !tracked.has(key)) this.pens.delete(key);
   };
 
@@ -610,7 +571,7 @@ export class Studio {
       } else {
         this.pens.set(ev.handKey, { p: ev.p, state: ev.type === 'hover' ? 'hover' : 'drawing', color: style.color });
       }
-      if (this.replay || this.calibrating || this.mode !== 'studio') continue;
+      if (this.replay || this.mode !== 'studio') continue;
       if (paused && ev.handKey !== POINTER_KEY) continue;
       this.applyBuild(this.builder.handle(ev, style, this.frame));
     }
@@ -618,7 +579,7 @@ export class Studio {
 
   private handleGestures(events: InputEvent[]): void {
     for (const ev of events) {
-      if (ev.type !== 'gesture' || this.replay || this.calibrating || this.mode !== 'studio') continue;
+      if (ev.type !== 'gesture' || this.replay || this.mode !== 'studio') continue;
       countGesture(ev.name);
       switch (ev.name) {
         case 'undo':

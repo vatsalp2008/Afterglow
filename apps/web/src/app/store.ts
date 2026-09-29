@@ -6,7 +6,6 @@ import {
   DEFAULT_FILTER_SPECS,
   DEFAULT_PINCH,
   type BrushId,
-  type CalibrationResult,
   type FilterSpec,
   type PenState,
   type PinchConfig,
@@ -55,30 +54,6 @@ export interface BenchState {
 
 const reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-const PINCH_KEY = 'afterglow:pinch-calibration';
-const OFFERED_KEY = 'afterglow:calibration-offered';
-
-/** Pinch thresholds from a saved calibration, if any. */
-function savedPinch(): PinchConfig | null {
-  try {
-    const raw = JSON.parse(localStorage.getItem(PINCH_KEY) ?? 'null') as {
-      enter?: unknown;
-      exit?: unknown;
-      fistBelow?: unknown;
-    } | null;
-    if (typeof raw?.enter === 'number' && typeof raw.exit === 'number' && raw.exit > raw.enter) {
-      // Calibrations saved before the fist gate existed keep the default gate.
-      const fistBelow = typeof raw.fistBelow === 'number' ? raw.fistBelow : DEFAULT_PINCH.fistBelow;
-      return { ...DEFAULT_PINCH, enter: raw.enter, exit: raw.exit, fistBelow };
-    }
-  } catch {
-    // Storage unavailable or corrupt: fall back to the tuned defaults.
-  }
-  return null;
-}
-
-const saved = typeof localStorage === 'undefined' ? null : savedPinch();
-
 export interface StudioState {
   phase: Phase;
   inputMode: InputMode;
@@ -98,15 +73,6 @@ export interface StudioState {
   debugView: boolean;
   filter: FilterSpec;
   pinch: PinchConfig;
-  /** Whether the pinch thresholds come from this user's calibration. */
-  calibrated: boolean;
-  calibrationOpen: boolean;
-  calibrationOffered: boolean;
-  /**
-   * A saved calibration fits the person who made it, but it's saved per browser, so each
-   * visit asks whether someone new is painting. Dismissed for this visit only.
-   */
-  recalibrationDismissed: boolean;
 
   cameras: CameraDevice[];
   cameraId: string | null;
@@ -149,11 +115,7 @@ export const useStudioStore = create<StudioState>()(() => ({
   showRaw: false,
   debugView: false,
   filter: DEFAULT_FILTER_SPECS.oneEuro,
-  pinch: saved ?? DEFAULT_PINCH,
-  calibrated: saved !== null,
-  calibrationOpen: false,
-  calibrationOffered: typeof localStorage !== 'undefined' && localStorage.getItem(OFFERED_KEY) !== null,
-  recalibrationDismissed: false,
+  pinch: DEFAULT_PINCH,
 
   cameras: [],
   cameraId: null,
@@ -189,33 +151,6 @@ export const useStudioStore = create<StudioState>()(() => ({
   toast: null,
   reducedMotion,
 }));
-
-export function savePinchCalibration({ enter, exit, fistBelow }: CalibrationResult): void {
-  useStudioStore.setState((s) => ({ pinch: { ...s.pinch, enter, exit, fistBelow }, calibrated: true }));
-  try {
-    localStorage.setItem(PINCH_KEY, JSON.stringify({ enter, exit, fistBelow }));
-  } catch {
-    // Not persisted; still applies for this session.
-  }
-}
-
-export function resetPinchCalibration(): void {
-  useStudioStore.setState({ pinch: DEFAULT_PINCH, calibrated: false });
-  try {
-    localStorage.removeItem(PINCH_KEY);
-  } catch {
-    // Nothing stored.
-  }
-}
-
-export function markCalibrationOffered(): void {
-  useStudioStore.setState({ calibrationOffered: true, recalibrationDismissed: true });
-  try {
-    localStorage.setItem(OFFERED_KEY, '1');
-  } catch {
-    // Offer again next time.
-  }
-}
 
 let toastId = 0;
 export function showToast(text: string): void {

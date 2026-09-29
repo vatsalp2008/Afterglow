@@ -6,7 +6,7 @@ import type { Studio } from '../studio/studio';
 import type { HandStat } from './store';
 import { Field, FilterControls, Slider } from './Controls';
 import styles from './Hud.module.css';
-import { resetPinchCalibration, useStudioStore } from './store';
+import { useStudioStore } from './store';
 
 const ms = (v: number | null) => (v === null ? 'n/a' : `${Math.round(v)} ms`);
 
@@ -70,7 +70,6 @@ export function Hud({ studio }: { studio: Studio }) {
       gestures: st.gestures,
       pinch: st.pinch,
       filter: st.filter,
-      calibrated: st.calibrated,
       showSkeleton: st.showSkeleton,
       showRaw: st.showRaw,
       debugView: st.debugView,
@@ -159,18 +158,6 @@ export function Hud({ studio }: { studio: Studio }) {
           <section className={styles.section}>
             <h3>Pen</h3>
             {stats.hands.length === 0 && <p className={styles.muted}>No hand in view</p>}
-            {camera && (
-              <div className={styles.calibrate}>
-                <button type="button" onClick={() => set({ calibrationOpen: true })}>
-                  Calibrate pinch
-                </button>
-                {s.calibrated && (
-                  <button type="button" onClick={resetPinchCalibration}>
-                    Reset to defaults
-                  </button>
-                )}
-              </div>
-            )}
             {stats.hands.map((h) => (
               <PinchBar key={h.key} hand={h} enter={s.pinch.enter} exit={s.pinch.exit} />
             ))}
