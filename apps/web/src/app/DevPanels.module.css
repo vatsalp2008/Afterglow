@@ -23,6 +23,23 @@
   line-height: 1.5;
 }
 
+.person {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 14px;
+  color: var(--fog);
+}
+
+.person input {
+  width: 8em;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--night-deep);
+  color: var(--paper);
+  font: inherit;
+}
+
 .list {
   margin: 0;
   padding: 0;

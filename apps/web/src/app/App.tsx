@@ -67,6 +67,7 @@ export function App() {
           {inputMode === 'camera' && calibrationOpen && <CalibrationPanel studio={studio} />}
           {inputMode === 'camera' && !calibrationOpen && offerCalibration && <CalibrationOffer />}
           {params.get('record') === 'fixtures' && <FixtureCapture studio={studio} />}
+          {params.get('record') === 'guest' && <FixtureCapture studio={studio} guest />}
           {params.get('bench') === 'tracker' && <TrackerBench studio={studio} />}
         </>
       )}

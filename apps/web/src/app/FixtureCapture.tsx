@@ -1,6 +1,6 @@
 import { Button, Panel } from '@afterglow/ui';
 import { useEffect, useState } from 'react';
-import { SCENARIOS } from '../studio/scenarios';
+import { GUEST_SCENARIO_IDS, PERSON_ID, SCENARIOS } from '../studio/scenarios';
 import type { Studio } from '../studio/studio';
 import styles from './DevPanels.module.css';
 import { useStudioStore } from './store';
@@ -13,9 +13,15 @@ interface Run {
   endsAt: number;
 }
 
-/** Guided recording of the fixture scenarios (?record=fixtures). */
-export function FixtureCapture({ studio }: { studio: Studio }) {
+/**
+ * Guided recording of the fixture scenarios (?record=fixtures), or of a short set for
+ * someone else's hand under an anonymous id (?record=guest).
+ */
+export function FixtureCapture({ studio, guest = false }: { studio: Studio; guest?: boolean }) {
   const inputMode = useStudioStore((s) => s.inputMode);
+  const [person, setPerson] = useState('');
+  const personOk = !guest || PERSON_ID.test(person);
+  const scenarios = guest ? SCENARIOS.filter((s) => GUEST_SCENARIO_IDS.includes(s.id)) : SCENARIOS;
   const [run, setRun] = useState<Run | null>(null);
   const [now, setNow] = useState(0);
   const [saved, setSaved] = useState<ReadonlySet<string>>(new Set());
@@ -29,7 +35,7 @@ export function FixtureCapture({ studio }: { studio: Studio }) {
       const scenario = SCENARIOS.find((s) => s.id === run.id);
       if (!scenario) return;
       if (run.phase === 'countdown') {
-        studio.startSession(scenario);
+        studio.startSession(scenario, guest ? person : null);
         setRun({ id: run.id, phase: 'recording', endsAt: t + scenario.durationMs });
       } else {
         studio.stopSession();
@@ -38,7 +44,7 @@ export function FixtureCapture({ studio }: { studio: Studio }) {
       }
     }, 100);
     return () => clearInterval(timer);
-  }, [run, studio]);
+  }, [run, studio, guest, person]);
 
   // Event timestamps share performance.now()'s timebase.
   const begin = (id: string, t: number) => {
@@ -53,16 +59,30 @@ export function FixtureCapture({ studio }: { studio: Studio }) {
 
   return (
     <Panel as="section" className={styles.panel} aria-label="Record fixtures">
-      <h2>Record fixtures</h2>
+      <h2>{guest ? 'Record someone else' : 'Record fixtures'}</h2>
       <p className={styles.lede}>
+        {guest ? 'Four short clips, about a minute in all. Let them pinch the way they naturally would. ' : ''}
         Each clip starts after a 3-second countdown and saves to your downloads with the right name. Only hand landmarks
         are saved, never video.
       </p>
+      {guest && (
+        <label className={styles.person}>
+          <span>Person id</span>
+          <input
+            value={person}
+            placeholder="p2"
+            maxLength={8}
+            autoComplete="off"
+            onChange={(e) => setPerson(e.target.value.trim().toLowerCase())}
+          />
+          <small>An id like p2, not a name: the recordings go in the project’s public repository.</small>
+        </label>
+      )}
       {inputMode !== 'camera' ? (
         <p className={styles.lede}>Start painting with the camera to record.</p>
       ) : (
         <ol className={styles.list}>
-          {SCENARIOS.map((s) => {
+          {scenarios.map((s) => {
             const active = run?.id === s.id;
             const secondsLeft = active ? Math.max(0, Math.ceil((run.endsAt - now) / 1000)) : 0;
             return (
@@ -88,7 +108,7 @@ export function FixtureCapture({ studio }: { studio: Studio }) {
                       <Button
                         variant="secondary"
                         className={styles.small}
-                        disabled={run !== null}
+                        disabled={run !== null || !personOk}
                         onClick={(e) => begin(s.id, e.timeStamp)}
                       >
                         {saved.has(s.id) ? 'Again' : 'Record'}

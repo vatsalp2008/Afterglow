@@ -22,6 +22,7 @@ export interface CaptureContext {
 export class SessionCapture {
   private recorder = new SessionRecorder();
   private scenario: Scenario | null = null;
+  private person: string | null = null;
   private recording = false;
 
   get active(): boolean {
@@ -32,9 +33,11 @@ export class SessionCapture {
     return this.recorder.frameCount;
   }
 
-  start(scenario: Scenario | null = null): void {
+  /** `person` is an anonymous id for someone other than the main author; it prefixes the file name. */
+  start(scenario: Scenario | null = null, person: string | null = null): void {
     this.recorder.clear();
     this.scenario = scenario;
+    this.person = person;
     this.recording = true;
   }
 
@@ -47,6 +50,7 @@ export class SessionCapture {
     this.recording = false;
     this.recorder.clear();
     this.scenario = null;
+    this.person = null;
   }
 
   /** Ends the capture and names the file after the scenario, if there is one. */
@@ -57,10 +61,13 @@ export class SessionCapture {
       meta.scenario = this.scenario.id;
       meta.notes = this.scenario.instruction;
     }
+    if (this.person) meta.person = this.person;
     const recording = this.recorder.finish(meta);
-    const fileName = `${this.scenario?.id ?? fallbackName}.json`;
+    const base = this.scenario?.id ?? fallbackName;
+    const fileName = `${this.person ? `${this.person}-${base}` : base}.json`;
     this.recorder.clear();
     this.scenario = null;
+    this.person = null;
     return { recording, fileName };
   }
 }

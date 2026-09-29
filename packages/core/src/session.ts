@@ -19,6 +19,8 @@ export interface SessionMeta {
   recordedAt: string;
   /** Fixture scenario id, e.g. "04-pinch-on-off". */
   scenario?: string;
+  /** An anonymous id for whose hand this is (e.g. "p2"), when it isn't the main author's. */
+  person?: string;
   notes?: string;
 }
 
@@ -162,7 +164,9 @@ export function parseSessionRecording(raw: unknown): SessionRecording {
   };
   const scenario = optStr(m['scenario'], 'meta.scenario');
   const notes = optStr(m['notes'], 'meta.notes');
+  const person = optStr(m['person'], 'meta.person');
   if (scenario !== undefined) meta.scenario = scenario;
+  if (person !== undefined) meta.person = person;
   if (notes !== undefined) meta.notes = notes;
 
   let lastTime = -Infinity;

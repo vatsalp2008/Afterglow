@@ -426,12 +426,12 @@ export class Studio {
     else this.startSession(null);
   }
 
-  startSession(scenario: Scenario | null): void {
+  startSession(scenario: Scenario | null, person: string | null = null): void {
     if (!this.canRecordSession) {
       showToast('Start the camera to record a session');
       return;
     }
-    this.session.start(scenario);
+    this.session.start(scenario, person);
     useStudioStore.setState({ session: { scenario: scenario?.id ?? null } });
     if (!scenario) showToast('Recording session. Press R to stop.');
   }

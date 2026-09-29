@@ -8,6 +8,20 @@ export interface Scenario {
   durationMs: number;
 }
 
+/**
+ * What another person records (?record=guest): enough to check the pinch and the fist
+ * gate on a hand other than the author's, in about a minute.
+ */
+export const GUEST_SCENARIO_IDS: readonly string[] = [
+  '04-pinch-on-off',
+  '02-slow-circles',
+  '09-relaxed-hand',
+  '11-fist',
+];
+
+/** An anonymous person id: letters and digits, like "p2". Never a name: fixtures are public. */
+export const PERSON_ID = /^[a-z][a-z0-9]{0,7}$/;
+
 export const SCENARIOS: readonly Scenario[] = [
   {
     id: '01-still-hand',
