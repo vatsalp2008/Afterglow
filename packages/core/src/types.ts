@@ -54,8 +54,11 @@ export type InputEvent =
   | { type: 'strokeMove'; t: number; handKey: HandKey; p: PenSample }
   | { type: 'strokeEnd'; t: number; handKey: HandKey; reason: 'release' | 'handLost' }
   | { type: 'hover'; t: number; handKey: HandKey; p: PenSample }
-  /** For a two-hand gesture, handKey is the first of the hands. */
-  | { type: 'gesture'; t: number; handKey: HandKey; name: ToolGesture };
+  /**
+   * For a two-hand gesture, handKey is the first of the hands. `at` is where it was made
+   * (view space) and `palm` the hand's palm length (frame heights), for anchoring UI to it.
+   */
+  | { type: 'gesture'; t: number; handKey: HandKey; name: ToolGesture; at?: Vec2; palm?: number };
 
 /** A stroke point in canvas space. */
 export interface StrokePoint {

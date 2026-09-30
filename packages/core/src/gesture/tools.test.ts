@@ -99,6 +99,12 @@ function run(
 
 const names = (evs: Array<{ name: string }>) => evs.map((e) => e.name);
 
+const frameOf = (t: number, lms: Vec3[][]): HandFrame => ({
+  frameId: t,
+  captureTime: t,
+  hands: lms.map((landmarks, i) => ({ key: `h${String(i)}`, handedness: 'Right', score: 1, landmarks })),
+});
+
 describe('handShape and classifyPose', () => {
   it.each(Object.entries(POSES))('recognizes %s', (pose, spec) => {
     expect(classifyPose(handShape(hand(spec), 1))).toBe(pose === 'relaxed' ? 'none' : pose);
@@ -213,6 +219,36 @@ describe('held gestures', () => {
     // The hold starts over once drawing stops.
     const evs = run(tracker, 1000, 1500, [hand(POSES.fist)]);
     expect(evs[0]!.t).toBeGreaterThanOrEqual(1300);
+  });
+
+  it('tells where the menu gesture was made, and how big the hand is', () => {
+    const evs = run(new ToolGestureTracker(), 0, 800, [hand({ ...POSES.openPalm, at: { x: 0.3, y: 0.7 } })]);
+    const e = evs[0]!;
+    // The palm center sits above the wrist (view space), and the palm is 0.15 frame heights long.
+    expect(e.at!.x).toBeCloseTo(0.3 + 0.08 * P, 2);
+    expect(e.at!.y).toBeLessThan(0.7);
+    expect(e.palm).toBeCloseTo(P, 6);
+  });
+
+  it('latches the pose held when the menu closes, so it fires only once it ends', () => {
+    const tracker = new ToolGestureTracker();
+    const f = [hand(POSES.fist)];
+    // The fist that closed the menu, still held: it must not also pause.
+    run(tracker, 0, 150, f);
+    tracker.latch(frameOf(150, f), 1);
+    expect(tracker.fsmState).toBe('active');
+    expect(run(tracker, 150, 1500, f)).toEqual([]);
+    // Released, cooled down, and made again: now it pauses.
+    run(tracker, 1500, 2400, []);
+    expect(names(run(tracker, 2400, 2800, f))).toEqual(['pause']);
+  });
+
+  it('starts the cooldown on latch when no pose is held', () => {
+    const tracker = new ToolGestureTracker();
+    tracker.latch(frameOf(0, []), 1);
+    expect(tracker.fsmState).toBe('cooling');
+    const evs = run(tracker, 33, 1500, [hand(POSES.fist)]);
+    expect(evs[0]!.t).toBeGreaterThanOrEqual(800 + 300);
   });
 
   it('resets', () => {

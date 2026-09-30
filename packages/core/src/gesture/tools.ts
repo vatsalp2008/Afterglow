@@ -293,11 +293,15 @@ export class ToolGestureTracker {
             this.lastSwipe = null;
           }
           break;
-        case 'activate':
-          if (this.current && this.current.kind !== 'swipe') {
-            events.push({ type: 'gesture', t, handKey: this.current.hands[0]!, name: this.current.kind });
+        case 'activate': {
+          const c = this.current;
+          if (c && c.kind !== 'swipe') {
+            // Candidate centers are in view units scaled by the aspect in x.
+            const at = { x: c.center.x / aspect, y: c.center.y };
+            events.push({ type: 'gesture', t, handKey: c.hands[0]!, name: c.kind, at, palm: c.palm });
           }
           break;
+        }
         case 'track':
           if (this.current?.kind === 'swipe' && candidate) this.trackSwipe(candidate, t, events);
           break;
@@ -317,6 +321,27 @@ export class ToolGestureTracker {
     }
     this.state = row.to;
     return events;
+  }
+
+  /**
+   * After the menu closes: whatever pose is held now counts as used, so neither the palm
+   * nor the fist that closed the menu fires again until the pose ends and the cooldown
+   * passes. With no pose held, the cooldown starts now.
+   */
+  latch(frame: HandFrame, aspect: number): void {
+    const t = frame.captureTime;
+    const held = this.classify(this.candidates(frame, aspect), t).candidate;
+    this.prev = null;
+    this.move = null;
+    this.lastSwipe = null;
+    if (held) {
+      this.current = { ...held, since: t, lastSeen: t, anchor: { ...held.center, opening: held.opening } };
+      this.state = 'active';
+    } else {
+      this.current = null;
+      this.coolSince = t;
+      this.state = 'cooling';
+    }
   }
 
   reset(): void {
