@@ -42,6 +42,9 @@ flowchart LR
   FLT --> GST[PinchTracker<br/>hysteresis, rejoin, fist gate]
   FLT --> TOOL[ToolGestureTracker<br/>palm, fist, swipe, frame]
   GST -->|pen state| TOOL
+  TOOL -->|open palm| MENU[MenuController<br/>radial menu, point and pinch]
+  GST -->|pinch| MENU
+  MENU -->|commands| STORE
   PTR[Pointer and touch] -->|InputEvent| ENG
   GST -->|InputEvent| ENG[StrokeBuilder<br/>Catmull-Rom]
   TOOL -->|undo, redo, pause| STORE
@@ -55,7 +58,7 @@ flowchart LR
 ```
 
 - **Frames are driven by `requestVideoFrameCallback`**, so each camera frame is processed exactly once. Rendering runs separately on `requestAnimationFrame` and draws the latest state.
-- **Everything from `HandIdentity` to `History` is in `packages/core`** and never reads a clock: time is passed in with each frame or event. Both gesture state machines run from explicit transition tables, drawn in [gesture-fsm.md](gesture-fsm.md) ([ADR 0005](adr/0005-pinch-detection.md), [ADR 0006](adr/0006-tool-gestures.md)).
+- **Everything from `HandIdentity` to `History` is in `packages/core`** and never reads a clock: time is passed in with each frame or event. The pen, tool gesture, and menu state machines run from explicit transition tables, drawn in [gesture-fsm.md](gesture-fsm.md) ([ADR 0005](adr/0005-pinch-detection.md), [ADR 0006](adr/0006-tool-gestures.md), [ADR 0009](adr/0009-gesture-menu.md)).
 - **The pipeline runs outside React.** The studio orchestrator (`apps/web/src/studio`) owns the loop and writes cursors and the skeleton overlay straight to the DOM. React renders the controls and reads a zustand store, which the studio updates four times a second with stats.
 - **Hand tracking runs in a Web Worker**, behind a `HandTracker` interface, with an automatic main-thread fallback ([ADR 0003](adr/0003-hand-tracking-in-a-worker.md)). Camera frames are transferred as `ImageBitmap`s; one is in flight at a time, and the newest frame waits in a one-slot mailbox.
 - **The Filter Lab is a second page** (`/lab/`, a second Vite entry). It replays recordings offline through `filterRun` in `packages/core/src/eval`, which uses the same replay and metrics as the benchmarks, and draws plain SVG charts. It loads neither Three.js nor MediaPipe.
