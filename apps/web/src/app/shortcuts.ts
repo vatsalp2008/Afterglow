@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import type { BrushId } from '@afterglow/core';
 import { BRUSH_COLORS } from '@afterglow/ui/tokens';
 import type { Studio } from '../studio/studio';
+import { command, isEnabled } from './commands';
 import { useStudioStore } from './store';
 import type { SizeId } from './brushes';
 
@@ -18,15 +19,19 @@ export function useShortcuts(studio: Studio | null): void {
       const key = e.key.toLowerCase();
       const mod = e.metaKey || e.ctrlKey;
 
+      // Keys run the same commands as the dock and the gesture menu.
+      const run = (id: string) => {
+        const c = command(id);
+        if (isEnabled(c, s)) c.run(studio, s);
+      };
       if (key === 'z') {
         e.preventDefault();
-        if (e.shiftKey) studio.redo();
-        else studio.undo();
+        run(e.shiftKey ? 'redo' : 'undo');
         return;
       }
       if (mod && key === 'y') {
         e.preventDefault();
-        studio.redo();
+        run('redo');
         return;
       }
       if (mod || e.altKey) return;
@@ -34,7 +39,7 @@ export function useShortcuts(studio: Studio | null): void {
       const colorIndex = Number(key) - 1;
       const color = BRUSH_COLORS[colorIndex];
       if (color) {
-        set({ color: color.hex, tool: 'draw' });
+        run(`color:${color.hex}`);
         return;
       }
       switch (key) {
@@ -47,7 +52,7 @@ export function useShortcuts(studio: Studio | null): void {
           );
           break;
         case 'e':
-          set({ tool: s.tool === 'erase' ? 'draw' : 'erase' });
+          run('tool:erase');
           break;
         case '[':
           set({ size: SIZE_ORDER[Math.max(0, SIZE_ORDER.indexOf(s.size) - 1)]! });
@@ -56,24 +61,22 @@ export function useShortcuts(studio: Studio | null): void {
           set({ size: SIZE_ORDER[Math.min(SIZE_ORDER.length - 1, SIZE_ORDER.indexOf(s.size) + 1)]! });
           break;
         case 'f':
-          set({ fade: !s.fade });
+          run('fade');
           break;
         case 'd':
-          if (s.inputMode === 'camera') set({ darkroom: !s.darkroom });
+          run('darkroom');
           break;
         case 'h':
           set({ hudOpen: !s.hudOpen });
           break;
         case 't':
-          if (s.replaying) studio.stopReplay();
-          else studio.startReplay();
+          run(s.replaying ? 'stop' : 'replay');
           break;
         case 'v':
-          if (s.replaying) studio.stopReplay();
-          else studio.startReplay(true);
+          run(s.replaying ? 'stop' : 'video');
           break;
         case 's':
-          void studio.saveStill();
+          run('still');
           break;
         case 'r':
           studio.toggleSessionRecording();
@@ -87,7 +90,7 @@ export function useShortcuts(studio: Studio | null): void {
           studio.requestClear();
           break;
         case 'escape':
-          studio.stopReplay();
+          run('stop');
           break;
       }
     };

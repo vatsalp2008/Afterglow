@@ -5,7 +5,8 @@ import { Dock } from './Dock';
 import { FixtureCapture } from './FixtureCapture';
 import { Hud } from './Hud';
 import { Intro, Unsupported } from './Intro';
-import { Hint, Toast } from './Overlay';
+import { GesturesHelp, Hint, Toast } from './Overlay';
+import { RadialMenu } from './RadialMenu';
 import { useShortcuts } from './shortcuts';
 import { useStudioStore } from './store';
 import { TrackerBench } from './TrackerBench';
@@ -58,6 +59,8 @@ export function App() {
       {studio && phase === 'studio' && (
         <>
           <Hint />
+          <RadialMenu />
+          <GesturesHelp />
           <Dock studio={studio} />
           <Hud studio={studio} />
           {params.get('record') === 'fixtures' && <FixtureCapture studio={studio} />}

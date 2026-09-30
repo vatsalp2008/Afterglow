@@ -89,6 +89,29 @@ button {
   background: rgba(233, 236, 245, 0.14);
 }
 
+/* Where the palm points while the gesture menu is open (positioned by the studio). */
+.menu-pointer {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 8;
+  will-change: transform;
+}
+
+.menu-pointer::before {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--tungsten);
+  box-shadow: 0 0 16px 4px rgba(255, 181, 71, 0.6);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pen-cursor::before {
     transition: none;

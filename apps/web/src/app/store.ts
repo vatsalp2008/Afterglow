@@ -7,6 +7,7 @@ import {
   DEFAULT_PINCH,
   type BrushId,
   type FilterSpec,
+  type MenuTarget,
   type PenState,
   type PinchConfig,
   type ToolGesture,
@@ -62,6 +63,18 @@ export interface StudioState {
 
   /** Drawing with the brush, or erasing what the pen passes over. */
   tool: 'draw' | 'erase';
+  /**
+   * The gesture menu while it's open: the submenu path, the highlighted wedge (or the
+   * center), and where it is on screen (px). Published only when these change.
+   */
+  menu: {
+    path: readonly string[];
+    highlight: MenuTarget | null;
+    center: { x: number; y: number };
+    radius: number;
+  } | null;
+  /** The card listing the gestures is showing. */
+  helpOpen: boolean;
   brush: BrushId;
   color: string;
   size: SizeId;
@@ -107,6 +120,8 @@ export const useStudioStore = create<StudioState>()(() => ({
   error: null,
 
   tool: 'draw',
+  menu: null,
+  helpOpen: false,
   brush: 'neon',
   color: PALETTE.sodium,
   size: 'm',

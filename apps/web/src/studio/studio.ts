@@ -12,6 +12,7 @@ import {
   HAND_CONNECTIONS,
   HandIdentity,
   History,
+  MenuController,
   LandmarkFilter,
   landmarkToView,
   penSample,
@@ -22,11 +23,13 @@ import {
   StrokeBuilder,
   ToolGestureTracker,
   viewToCanvas,
+  visibleCanvasRect,
   type BuildResult,
   type CoverFit,
   type FrameSize,
   type HandFrame,
   type InputEvent,
+  type MenuEvent,
   type PenSample,
   type PenState,
   type SessionRecording,
@@ -49,6 +52,7 @@ import {
   type TrackerTiming,
 } from '@afterglow/tracking';
 import { ERASER_RADII, SIZES } from '../app/brushes';
+import { menuTree, runByGesture } from '../app/commands';
 import { showToast, useStudioStore, type StudioState } from '../app/store';
 import { DemoPen } from './demoPen';
 import { download, downloadJson, stamp } from './download';
@@ -86,6 +90,19 @@ interface Replay {
 
 const newId = () => crypto.randomUUID();
 
+const HELP_SEEN_KEY = 'afterglow:gestures-help-seen';
+
+/** Shows the gestures card the first time the camera is used. */
+function showGesturesOnce(): void {
+  try {
+    if (localStorage.getItem(HELP_SEEN_KEY)) return;
+    localStorage.setItem(HELP_SEEN_KEY, '1');
+  } catch {
+    // Storage unavailable: show it this time anyway.
+  }
+  useStudioStore.setState({ helpOpen: true });
+}
+
 function countGesture(name: ToolGesture): void {
   useStudioStore.setState((s) => ({ gestures: { ...s.gestures, [name]: (s.gestures[name] ?? 0) + 1 } }));
 }
@@ -104,6 +121,8 @@ export class Studio {
   private filter = new LandmarkFilter(useStudioStore.getState().filter);
   private pinch = new PinchTracker(useStudioStore.getState().pinch);
   private tools = new ToolGestureTracker();
+  private gestureMenu = new MenuController();
+  private menuPointerEl: HTMLDivElement | null = null;
   /** Erase gestures in progress, per pen: an undo group and the last eraser position (canvas units). */
   private erasing = new Map<string, { group: string; last: Vec2 }>();
   private tracker: HandTracker | null = null;
@@ -229,6 +248,7 @@ export class Studio {
     set({ inputMode: 'camera' });
     this.enterStudio();
     void this.refreshCameras();
+    showGesturesOnce();
   }
 
   /** Replays a recorded session from fixtures/sessions instead of a camera. */
@@ -292,6 +312,7 @@ export class Studio {
     stopCamera(this.stream);
     for (const d of this.disposers) d();
     for (const el of this.cursorEls.values()) el.remove();
+    this.menuPointerEl?.remove();
     this.renderer.dispose();
   }
 
@@ -342,6 +363,12 @@ export class Studio {
 
   redo(): void {
     if (!this.replay) this.history.redo();
+  }
+
+  /** Clears at once: the gesture menu and the dock ask for confirmation themselves. */
+  clear(): void {
+    if (this.replay || this.history.strokes.length === 0) return;
+    this.history.clear();
   }
 
   /** Pauses or resumes drawing with the hands; the pointer still draws. */
@@ -542,10 +569,22 @@ export class Studio {
     const filtered = this.filter.apply(identified);
     this.lastFiltered = filtered;
     this.overlayDirty = true;
-    this.handleEvents(this.pinch.update(filtered, aspect));
-
+    const penEvents = this.pinch.update(filtered, aspect);
     const tracked = this.pinch.status();
-    this.handleGestures(this.tools.update(filtered, aspect, tracked));
+    const gestures = this.tools.update(filtered, aspect, this.gestureMenu.visiblePens(tracked));
+    const wasOpen = this.gestureMenu.isOpen;
+    const menuEvents = this.gestureMenu.update(
+      filtered,
+      this.frame,
+      tracked,
+      this.mode === 'studio' ? gestures : [],
+      menuTree(useStudioStore.getState()),
+      visibleCanvasRect(this.frame, this.viewport),
+    );
+    // No drawing while the menu is open, nor from the pinch that chose something until it releases.
+    this.handleEvents(penEvents.filter((e) => !this.gestureMenu.blocks(e)));
+    this.handleMenu(menuEvents, filtered, aspect);
+    if (!wasOpen) this.handleGestures(gestures);
     for (const key of this.pens.keys()) if (key !== POINTER_KEY && !tracked.has(key)) this.pens.delete(key);
   };
 
@@ -556,6 +595,8 @@ export class Studio {
   private finishTrackedStrokes(): void {
     this.handleEvents(this.pinch.reset(this.now()));
     this.tools.reset();
+    this.gestureMenu.close();
+    useStudioStore.setState({ menu: null });
     this.identity.reset();
     this.filter.reset();
     this.lastFiltered = null;
@@ -601,6 +642,44 @@ export class Studio {
     const radius = ERASER_RADII[useStudioStore.getState().size];
     const { removed, added } = eraseStrokes(this.history.strokes, path, radius, newId);
     this.history.replace(removed, added, group);
+  }
+
+  private handleMenu(events: readonly MenuEvent[], filtered: HandFrame, aspect: number): void {
+    for (const e of events) {
+      switch (e.type) {
+        case 'open':
+          // End strokes in progress, including one in its rejoin window.
+          this.handleEvents(this.pinch.reset(filtered.captureTime));
+          useStudioStore.setState({ helpOpen: false });
+          this.publishMenu();
+          break;
+        case 'highlight':
+        case 'level':
+          this.publishMenu();
+          break;
+        case 'choose':
+          runByGesture(e.id, this, showToast);
+          break;
+        case 'close':
+          // The palm or fist that closed the menu mustn't fire a gesture of its own.
+          this.tools.latch(filtered, aspect);
+          useStudioStore.setState({ menu: null });
+          break;
+      }
+    }
+  }
+
+  private publishMenu(): void {
+    const m = this.gestureMenu.menu;
+    if (!m.isOpen) return;
+    useStudioStore.setState({
+      menu: {
+        path: m.path,
+        highlight: m.highlight,
+        center: canvasToScreen(m.center, this.fit),
+        radius: m.radius * this.fit.scale,
+      },
+    });
   }
 
   private handleGestures(events: InputEvent[]): void {
@@ -777,7 +856,10 @@ export class Studio {
   private drawCursors(): void {
     const showRaw = this.view().raw && this.mode === 'studio';
     const wanted = new Map<string, { p: PenSample; state: string; color: string }>();
-    for (const [key, pen] of this.pens) wanted.set(key, pen);
+    // While the menu is open, its hand shows the menu pointer (at the palm) instead of a pen.
+    const menuHand = this.gestureMenu.isOpen ? this.gestureMenu.handKey : null;
+    for (const [key, pen] of this.pens) if (key !== menuHand) wanted.set(key, pen);
+    this.drawMenuPointer();
     if (showRaw) for (const [key, p] of this.rawPens) wanted.set(`raw:${key}`, { p, state: 'raw', color: '#8A93B8' });
 
     for (const [key, el] of this.cursorEls) {
@@ -807,6 +889,22 @@ export class Studio {
         if (erase) el.style.setProperty('--eraser', `${(2 * ERASER_RADII[store.size] * this.fit.scale).toFixed(1)}px`);
       }
     }
+  }
+
+  private drawMenuPointer(): void {
+    const pointer = this.gestureMenu.isOpen ? this.gestureMenu.menu.pointer : null;
+    if (!pointer) {
+      if (this.menuPointerEl) this.menuPointerEl.hidden = true;
+      return;
+    }
+    if (!this.menuPointerEl) {
+      this.menuPointerEl = document.createElement('div');
+      this.menuPointerEl.className = 'menu-pointer';
+      this.els.cursors.appendChild(this.menuPointerEl);
+    }
+    const s = canvasToScreen(pointer, this.fit);
+    this.menuPointerEl.hidden = false;
+    this.menuPointerEl.style.transform = `translate3d(${String(s.x)}px, ${String(s.y)}px, 0)`;
   }
 
   private drawOverlay(): void {
@@ -905,5 +1003,6 @@ export class Studio {
     this.els.overlay.width = Math.round(this.viewport.width * this.dpr);
     this.els.overlay.height = Math.round(this.viewport.height * this.dpr);
     this.overlayDirty = true;
+    this.publishMenu();
   };
 }

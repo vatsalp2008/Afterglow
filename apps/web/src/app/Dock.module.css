@@ -8,7 +8,9 @@
   gap: 2px;
   padding: 6px;
   z-index: 8;
-  transition: opacity 400ms ease-out;
+  transition:
+    opacity 400ms ease-out,
+    transform 400ms ease-out;
 }
 
 /* Recede while painting so the light stays the only bold element. */
@@ -16,9 +18,18 @@
   opacity: 0.22;
 }
 
+/* Out of sight while hands are in control; the mouse moving or keyboard focus brings it back. */
+.hidden {
+  opacity: 0;
+  transform: translate(-50%, 14px);
+  pointer-events: none;
+}
+
 .dock:hover,
 .dock:focus-within {
   opacity: 1;
+  transform: translateX(-50%);
+  pointer-events: auto;
 }
 
 .group {

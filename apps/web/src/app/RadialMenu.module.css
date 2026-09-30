@@ -1,0 +1,92 @@
+/* A ring around the palm that opened it. --r is the ring radius in px; each item sits at
+   angle --a, clockwise from the top. */
+.menu {
+  position: fixed;
+  width: 0;
+  height: 0;
+  z-index: 7;
+  pointer-events: none;
+  font-size: 13px;
+}
+
+.hub,
+.item {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--panel);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: var(--paper);
+  transition:
+    border-color 120ms ease-out,
+    box-shadow 120ms ease-out,
+    background 120ms ease-out;
+}
+
+.hub {
+  width: calc(var(--r) * 0.7);
+  height: calc(var(--r) * 0.7);
+  transform: translate(-50%, -50%);
+  color: var(--fog);
+}
+
+.item {
+  width: 66px;
+  height: 66px;
+  align-content: center;
+  gap: 3px;
+  transform: rotate(var(--a)) translateY(calc(-1 * var(--r))) rotate(calc(-1 * var(--a))) translate(-50%, -50%);
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  height: 20px;
+}
+
+.label {
+  max-width: 88px;
+  font-size: 11.5px;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.item[data-pressed='true'] {
+  border-color: rgba(233, 236, 245, 0.45);
+}
+
+.item[aria-disabled='true'] {
+  opacity: 0.35;
+}
+
+.hub[data-highlighted='true'],
+.item[data-highlighted='true'] {
+  border-color: var(--tungsten);
+  background: rgba(255, 227, 176, 0.14);
+  box-shadow: 0 0 22px rgba(255, 181, 71, 0.45);
+  color: var(--paper);
+}
+
+.help {
+  position: absolute;
+  left: 0;
+  top: calc(var(--r) + 58px);
+  width: 260px;
+  margin: 0;
+  transform: translateX(-50%);
+  color: var(--fog);
+  text-align: center;
+  line-height: 1.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hub,
+  .item {
+    transition: none;
+  }
+}

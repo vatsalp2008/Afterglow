@@ -1,0 +1,14 @@
+.swatch {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--swatch);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--swatch) 45%, transparent);
+}
+
+.dot {
+  display: block;
+  border-radius: 50%;
+  background: currentColor;
+}

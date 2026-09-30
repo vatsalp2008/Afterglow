@@ -1,137 +1,116 @@
-import type { BrushId } from '@afterglow/core';
-import {
-  BRUSH_COLORS,
-  ClearIcon,
-  EraserIcon,
-  FadeIcon,
-  FixIcon,
-  IconButton,
-  InkIcon,
-  MoonIcon,
-  NeonIcon,
-  Panel,
-  PlayIcon,
-  RecordIcon,
-  RedoIcon,
-  SparksIcon,
-  StatsIcon,
-  StillIcon,
-  StopIcon,
-  UndoIcon,
-} from '@afterglow/ui';
-import type { CSSProperties, ReactNode } from 'react';
-import { useShallow } from 'zustand/react/shallow';
+import { BRUSH_COLORS, ClearIcon, IconButton, Panel, StatsIcon } from '@afterglow/ui';
+import { useEffect, useState, type CSSProperties } from 'react';
 import type { Studio } from '../studio/studio';
 import { SIZES, type SizeId } from './brushes';
+import { BRUSHES, command, isEnabled } from './commands';
 import styles from './Dock.module.css';
-import { useStudioStore } from './store';
-
-const BRUSHES: Array<{ id: BrushId; label: string; icon: ReactNode }> = [
-  { id: 'neon', label: 'Neon', icon: <NeonIcon /> },
-  { id: 'sparks', label: 'Sparks', icon: <SparksIcon /> },
-  { id: 'ink', label: 'Ink, no glow', icon: <InkIcon /> },
-];
-
-const SIZE_LABELS: Record<SizeId, string> = { s: 'Thin', m: 'Medium', l: 'Thick' };
+import { useStudioStore, type StudioState } from './store';
 
 const Divider = () => <span className={styles.divider} aria-hidden="true" />;
 
-export function Dock({ studio }: { studio: Studio }) {
-  const s = useStudioStore(
-    useShallow((st) => ({
-      tool: st.tool,
-      brush: st.brush,
-      color: st.color,
-      size: st.size,
-      fade: st.fade,
-      darkroom: st.darkroom,
-      inputMode: st.inputMode,
-      canUndo: st.canUndo,
-      canRedo: st.canRedo,
-      strokeCount: st.strokeCount,
-      replaying: st.replaying,
-      recording: st.recordingVideo,
-      drawing: st.drawing,
-      hudOpen: st.hudOpen,
-    })),
+/** True for `ms` after the mouse (or a pen) last moved. */
+function useRecentPointer(ms: number): boolean {
+  const [recent, setRecent] = useState(false);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') return;
+      setRecent(true);
+      clearTimeout(timer);
+      timer = setTimeout(() => setRecent(false), ms);
+    };
+    window.addEventListener('pointermove', onMove);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      clearTimeout(timer);
+    };
+  }, [ms]);
+  return recent;
+}
+
+/** A dock button for a command: its label with the shortcut, and its state. */
+function CommandButton({
+  id,
+  studio,
+  s,
+  pressed = true,
+}: {
+  id: string;
+  studio: Studio;
+  s: StudioState;
+  /** Toggles whose label names the action don't also show a pressed state. */
+  pressed?: boolean;
+}) {
+  const c = command(id);
+  return (
+    <IconButton
+      label={c.key ? `${c.label(s)} (${c.key})` : c.label(s)}
+      pressed={pressed ? c.pressed?.(s) : undefined}
+      disabled={!isEnabled(c, s)}
+      onClick={() => c.run(studio, s)}
+    >
+      {c.icon(s)}
+    </IconButton>
   );
+}
+
+/**
+ * The tools for mouse and keyboard. With hands (camera or a recorded session) everything
+ * is in the gesture menu, so the dock stays out of sight until the mouse moves or it has
+ * keyboard focus.
+ */
+export function Dock({ studio }: { studio: Studio }) {
+  const s = useStudioStore();
   const set = useStudioStore.setState;
+  const recentPointer = useRecentPointer(3000);
+  const hidden = s.inputMode !== 'pointer' && !recentPointer;
 
   return (
-    <Panel as="nav" className={`${styles.dock} ${s.drawing ? styles.receded : ''}`} aria-label="Tools">
+    <Panel
+      as="nav"
+      className={`${styles.dock} ${s.drawing ? styles.receded : ''} ${hidden ? styles.hidden : ''}`}
+      aria-label="Tools"
+      data-hidden={hidden}
+    >
       <div className={styles.group} role="group" aria-label="Brush">
         {BRUSHES.map((b) => (
-          <IconButton
-            key={b.id}
-            label={`${b.label} (B)`}
-            pressed={s.tool === 'draw' && s.brush === b.id}
-            onClick={() => set({ brush: b.id, tool: 'draw' })}
-          >
-            {b.icon}
-          </IconButton>
+          <CommandButton key={b.id} id={`brush:${b.id}`} studio={studio} s={s} />
         ))}
-        <IconButton
-          label="Eraser: pinch or drag over lines to erase them (E)"
-          pressed={s.tool === 'erase'}
-          onClick={() => set({ tool: s.tool === 'erase' ? 'draw' : 'erase' })}
-        >
-          <EraserIcon />
-        </IconButton>
+        <CommandButton id="tool:erase" studio={studio} s={s} />
       </div>
       <Divider />
       <div className={styles.group} role="group" aria-label="Color">
-        {BRUSH_COLORS.map((c, i) => (
-          <button
-            key={c.hex}
-            type="button"
-            className={styles.swatch}
-            style={{ '--swatch': c.hex } as CSSProperties}
-            data-tip={`${c.name} (${String(i + 1)})`}
-            aria-label={c.name}
-            aria-pressed={s.color === c.hex}
-            onClick={() => set({ color: c.hex, tool: 'draw' })}
-          />
-        ))}
+        {BRUSH_COLORS.map((c, i) => {
+          const cmd = command(`color:${c.hex}`);
+          return (
+            <button
+              key={c.hex}
+              type="button"
+              className={styles.swatch}
+              style={{ '--swatch': c.hex } as CSSProperties}
+              data-tip={`${c.name} (${String(i + 1)})`}
+              aria-label={c.name}
+              aria-pressed={cmd.pressed?.(s)}
+              onClick={() => cmd.run(studio, s)}
+            />
+          );
+        })}
       </div>
       <Divider />
       <div className={styles.group} role="group" aria-label="Size">
         {(Object.keys(SIZES) as SizeId[]).map((id) => (
-          <IconButton
-            key={id}
-            label={`${SIZE_LABELS[id]} ([ and ])`}
-            pressed={s.size === id}
-            onClick={() => set({ size: id })}
-          >
-            <span className={styles.dot} style={{ width: 4 + SIZES[id] * 0.5, height: 4 + SIZES[id] * 0.5 }} />
-          </IconButton>
+          <CommandButton key={id} id={`size:${id}`} studio={studio} s={s} />
         ))}
       </div>
       <Divider />
       <div className={styles.group}>
-        <IconButton
-          label={
-            s.fade
-              ? 'Strokes fade like a long exposure. Click to fix them (F)'
-              : 'Strokes are fixed. Click to let them fade (F)'
-          }
-          onClick={() => set({ fade: !s.fade })}
-        >
-          {s.fade ? <FadeIcon /> : <FixIcon />}
-        </IconButton>
-        {s.inputMode === 'camera' && (
-          <IconButton label="Darkroom (D)" pressed={s.darkroom} onClick={() => set({ darkroom: !s.darkroom })}>
-            <MoonIcon />
-          </IconButton>
-        )}
+        <CommandButton id="fade" studio={studio} s={s} pressed={false} />
+        {s.inputMode === 'camera' && <CommandButton id="darkroom" studio={studio} s={s} pressed={false} />}
       </div>
       <Divider />
       <div className={styles.group}>
-        <IconButton label="Undo (Z)" disabled={!s.canUndo || s.replaying} onClick={() => studio.undo()}>
-          <UndoIcon />
-        </IconButton>
-        <IconButton label="Redo (Shift Z)" disabled={!s.canRedo || s.replaying} onClick={() => studio.redo()}>
-          <RedoIcon />
-        </IconButton>
+        <CommandButton id="undo" studio={studio} s={s} />
+        <CommandButton id="redo" studio={studio} s={s} />
         <IconButton
           label="Clear, press twice (Delete)"
           disabled={s.strokeCount === 0 || s.replaying}
@@ -142,31 +121,11 @@ export function Dock({ studio }: { studio: Studio }) {
       </div>
       <Divider />
       <div className={styles.group}>
-        <IconButton
-          label={s.replaying ? 'Stop replay (Esc)' : 'Replay as timelapse (T)'}
-          pressed={s.replaying && !s.recording}
-          disabled={s.strokeCount === 0 && !s.replaying}
-          onClick={() => (s.replaying ? studio.stopReplay() : studio.startReplay())}
-        >
-          {s.replaying && !s.recording ? <StopIcon /> : <PlayIcon />}
-        </IconButton>
-        <IconButton
-          label="Save long exposure PNG (S)"
-          disabled={s.strokeCount === 0}
-          onClick={() => void studio.saveStill()}
-        >
-          <StillIcon />
-        </IconButton>
-        <IconButton
-          label={s.recording ? 'Stop recording (Esc)' : 'Record timelapse video (V)'}
-          pressed={s.recording}
-          disabled={s.strokeCount === 0 && !s.replaying}
-          onClick={() => (s.replaying ? studio.stopReplay() : studio.startReplay(true))}
-        >
-          <span className={s.recording ? styles.recording : undefined}>
-            <RecordIcon />
-          </span>
-        </IconButton>
+        <CommandButton id={s.replaying && !s.recordingVideo ? 'stop' : 'replay'} studio={studio} s={s} />
+        <CommandButton id="still" studio={studio} s={s} />
+        <span className={s.recordingVideo ? styles.recording : undefined}>
+          <CommandButton id={s.recordingVideo ? 'stop' : 'video'} studio={studio} s={s} />
+        </span>
       </div>
       <Divider />
       <IconButton label="Stats (H)" pressed={s.hudOpen} onClick={() => set({ hudOpen: !s.hudOpen })}>

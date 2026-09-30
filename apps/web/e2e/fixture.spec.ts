@@ -36,3 +36,24 @@ for (const [fixture, expected] of [
     expect(errors).toEqual([]);
   });
 }
+
+// Hands-only control: the open palm in 10-open-palm opens the gesture menu, and lowering
+// the hand points at the bottom item, Undo. The dock stays hidden until the mouse moves.
+test('opens the gesture menu from an open palm', async ({ page }) => {
+  test.setTimeout(60_000);
+  const errors = collectErrors(page);
+  await page.goto('/?fixture=10-open-palm');
+  const dock = page.getByRole('navigation', { name: 'Tools' });
+  await expect(dock).toHaveAttribute('data-hidden', 'true');
+
+  await expect(page.getByRole('menuitem', { name: 'Brush' })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('menuitem', { name: 'Undo' })).toHaveAttribute('data-highlighted', 'true', {
+    timeout: 10_000,
+  });
+  await page.mouse.move(640, 700);
+  await expect(dock).toHaveAttribute('data-hidden', 'false');
+  await page.keyboard.press('h');
+  const strokes = page.getByRole('complementary', { name: 'Stats' }).locator('dt', { hasText: 'Strokes' });
+  await expect(strokes.locator('xpath=following-sibling::dd')).toHaveText('0');
+  expect(errors).toEqual([]);
+});
