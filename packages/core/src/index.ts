@@ -20,3 +20,4 @@ export * from './eval/metrics.ts';
 export * from './eval/pipeline.ts';
 export * from './eval/compare.ts';
 export * from './gesture/tools.ts';
+export * from './gesture/menu.ts';

@@ -1,6 +1,6 @@
 # Gesture state machines
 
-Generated from `PEN_TRANSITIONS` in [`packages/core/src/gesture/pinch.ts`](../packages/core/src/gesture/pinch.ts) and `TOOL_TRANSITIONS` in [`packages/core/src/gesture/tools.ts`](../packages/core/src/gesture/tools.ts) by `pnpm --filter @afterglow/core docs:fsm`. Don't edit by hand; CI fails if this file is stale.
+Generated from `PEN_TRANSITIONS` in [`packages/core/src/gesture/pinch.ts`](../packages/core/src/gesture/pinch.ts), `TOOL_TRANSITIONS` in [`packages/core/src/gesture/tools.ts`](../packages/core/src/gesture/tools.ts), and `MENU_TRANSITIONS` in [`packages/core/src/gesture/menu.ts`](../packages/core/src/gesture/menu.ts) by `pnpm --filter @afterglow/core docs:fsm`. Don't edit by hand; CI fails if this file is stale.
 
 ## Pen
 
@@ -116,3 +116,63 @@ Waiting self-loops are omitted from the diagram. The full table:
 | cooling | drawing |  | ready | none |
 
 Actions: **begin** starts holding the frame's candidate; **activate** fires a held gesture (for two fingers up, it arms swipes instead); **track** fires undo or redo for each swipe while two fingers stay up; **cool** starts the cooldown once the pose ends; **clear** drops the candidate.
+
+## Gesture menu
+
+The ring of items opened by the open-palm gesture. The pointer is the palm center of the hand that opened it. Each frame, that hand is **free** (open, within reach), its fingers are **closing** (the pinch measure is below the release threshold), it's **pinched**, a **fist**, **far** from the ring, or **lost**. For fist, far, and lost, "confirmed" means the input has lasted long enough (`fistMs`, `farMs`, `lostMs`); for free, that the pointer has rested in the center for `idleMs`. `latched` holds the highlight still while the fingers close, so the item chosen is the one pointed at when the pinch began.
+
+```mermaid
+stateDiagram-v2
+  [*] --> open: open palm held
+  open --> open: free (not yet) / point
+  open --> [*]: free (confirmed) / close
+  open --> latched: closing
+  open --> awaitRelease: pinched / point, choose
+  open --> [*]: fist (confirmed) / close
+  open --> [*]: far (confirmed) / close
+  open --> [*]: lost (confirmed) / close
+  latched --> open: free / point
+  latched --> awaitRelease: pinched / choose
+  latched --> [*]: fist (confirmed) / close
+  latched --> [*]: far (confirmed) / close
+  latched --> [*]: lost (confirmed) / close
+  awaitRelease --> open: free / point
+  awaitRelease --> [*]: fist (confirmed) / close
+  awaitRelease --> [*]: far (confirmed) / close
+  awaitRelease --> [*]: lost (confirmed) / close
+```
+
+Waiting self-loops are omitted from the diagram. The full table:
+
+| From | Input | Confirmation | To | Actions |
+| --- | --- | --- | --- | --- |
+| open | free | not yet | open | point |
+| open | free | confirmed | closed | close |
+| open | closing |  | latched | none |
+| open | pinched |  | awaitRelease | point, choose |
+| open | fist | confirmed | closed | close |
+| open | fist | not yet | open | none |
+| open | far | confirmed | closed | close |
+| open | far | not yet | open | none |
+| open | lost | confirmed | closed | close |
+| open | lost | not yet | open | none |
+| latched | free |  | open | point |
+| latched | closing |  | latched | none |
+| latched | pinched |  | awaitRelease | choose |
+| latched | fist | confirmed | closed | close |
+| latched | fist | not yet | latched | none |
+| latched | far | confirmed | closed | close |
+| latched | far | not yet | latched | none |
+| latched | lost | confirmed | closed | close |
+| latched | lost | not yet | latched | none |
+| awaitRelease | free |  | open | point |
+| awaitRelease | closing |  | awaitRelease | none |
+| awaitRelease | pinched |  | awaitRelease | none |
+| awaitRelease | fist | confirmed | closed | close |
+| awaitRelease | fist | not yet | awaitRelease | none |
+| awaitRelease | far | confirmed | closed | close |
+| awaitRelease | far | not yet | awaitRelease | none |
+| awaitRelease | lost | confirmed | closed | close |
+| awaitRelease | lost | not yet | awaitRelease | none |
+
+Actions: **point** moves the highlight to the wedge (or the center) the palm points at; **choose** acts on the highlighted item: opens its submenu, runs it (closing the menu unless it keeps it open), goes back from the center, or closes from the top-level center; **close** closes the menu.
