@@ -133,4 +133,11 @@ export const SCENARIOS: readonly Scenario[] = [
       'Hold up two fingers (index and middle). Swipe left and bring your hand straight back, then wait a second. Do this 3 times, then the same 3 times to the right.',
     durationMs: 16_000,
   },
+  {
+    id: '18-menu-select',
+    title: 'Gesture menu',
+    instruction:
+      'Hold up an open hand, fingers spread, until the menu opens. Move your palm right (Size) and pinch, then let go. Move back to the middle and pinch to go back. Then make a fist to close the menu.',
+    durationMs: 15_000,
+  },
 ];
