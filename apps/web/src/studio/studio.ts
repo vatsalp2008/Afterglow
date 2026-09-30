@@ -107,6 +107,7 @@ function countGesture(name: ToolGesture): void {
   useStudioStore.setState((s) => ({ gestures: { ...s.gestures, [name]: (s.gestures[name] ?? 0) + 1 } }));
 }
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
 /** `?tracker=main|worker` overrides where inference runs (see ADR 0003). */
 function trackerPreference(): 'worker' | 'main' {
@@ -273,9 +274,14 @@ export class Studio {
         showToast(`Fixture ${name} finished`);
       },
     });
-    this.tracker.start(this.onTrackerFrame);
     set({ inputMode: 'fixture' });
     this.enterStudio();
+    // Play once the studio has drawn: the first frames compile shaders, which can stall
+    // the page for seconds on software WebGL, and a recording started before that would
+    // play its opening seconds in a burst when the page wakes up.
+    await nextFrame();
+    await nextFrame();
+    this.tracker.start(this.onTrackerFrame);
   }
 
   startPointer(): void {
