@@ -116,6 +116,28 @@ export const StatsIcon = () => (
   </Icon>
 );
 
+export const MoreIcon = () => (
+  <Icon>
+    <circle cx="5" cy="10" r="1.3" fill="currentColor" />
+    <circle cx="10" cy="10" r="1.3" fill="currentColor" />
+    <circle cx="15" cy="10" r="1.3" fill="currentColor" />
+  </Icon>
+);
+
+export const HelpIcon = () => (
+  <Icon>
+    <circle cx="10" cy="10" r="7" />
+    <path d="M8 8.1a2 2 0 1 1 2.9 1.8c-.6.3-.9.8-.9 1.4v.3" />
+    <circle cx="10" cy="14" r="0.6" fill="currentColor" />
+  </Icon>
+);
+
+export const KeepIcon = () => (
+  <Icon>
+    <path d="M5 10.5l3.2 3.2L15 7" />
+  </Icon>
+);
+
 export const CloseIcon = () => (
   <Icon>
     <path d="m5.5 5.5 9 9M14.5 5.5l-9 9" />
