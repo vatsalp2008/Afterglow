@@ -7,7 +7,7 @@ test('tracks a hand from the camera in a worker', async ({ page }) => {
   test.setTimeout(120_000);
   const errors = collectErrors(page);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Start painting' }).click();
+  // Permission is already granted, so the camera starts without a click (hands only).
   await expect(page.getByRole('navigation', { name: 'Tools' })).toBeVisible({ timeout: 60_000 });
 
   await page.keyboard.press('h');

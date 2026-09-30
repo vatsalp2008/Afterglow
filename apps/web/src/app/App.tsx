@@ -15,6 +15,20 @@ import { TrackerBench } from './TrackerBench';
 const params = new URLSearchParams(location.search);
 const fixture = params.get('fixture');
 
+/**
+ * Starts the camera without a click once permission was granted before, so a returning
+ * visitor needs only their hands. The first visit still needs the button: browsers ask
+ * for camera permission in response to it.
+ */
+async function startIfAllowed(studio: Studio): Promise<void> {
+  try {
+    const status = await navigator.permissions.query({ name: 'camera' });
+    if (status.state === 'granted' && useStudioStore.getState().phase === 'intro') await studio.startCamera();
+  } catch {
+    // Firefox doesn't know the "camera" permission name: wait for the button.
+  }
+}
+
 export function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
@@ -41,6 +55,7 @@ export function App() {
     // can only be created after mount; this runs once.
     setStudio(instance);
     if (instance && fixture) void instance.startFixture(fixture, params.has('loop'));
+    else if (instance && !params.has('bench') && !params.has('record')) void startIfAllowed(instance);
     return () => {
       if (instance) instance.dispose();
     };
