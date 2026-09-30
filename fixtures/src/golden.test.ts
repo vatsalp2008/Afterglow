@@ -47,6 +47,7 @@ describe('golden replays', () => {
     const golden = {
       strokes: strokes(replay.events),
       gestures: detectedGestures(replay).map((g) => ({ name: g.name, t: Math.round(g.t) })),
+      menu: replay.menu.map((e) => ({ ...e, t: Math.round(e.t) })),
       penState: score.penState && {
         precision: round(score.penState.precision),
         recall: round(score.penState.recall),
@@ -105,6 +106,19 @@ describe('tool gestures', () => {
     expect(detected[0]!.t).toBeGreaterThanOrEqual(1000);
     expect(detected[0]!.t).toBeLessThanOrEqual(2800);
     expect(new Set(detected.map((d) => d.name))).toEqual(new Set(['openMenu']));
+  });
+
+  it.each(fixtureNames().filter((n) => n !== '10-open-palm'))('%s never opens the gesture menu', (name) => {
+    expect(run(name).replay.menu).toEqual([]);
+  });
+
+  it('10-open-palm opens the menu on the first raise, points at the bottom item, and chooses nothing', () => {
+    const { menu } = run('10-open-palm').replay;
+    const first = menu.find((e) => e.type === 'open');
+    expect(first?.t).toBeGreaterThanOrEqual(1000);
+    expect(first?.t).toBeLessThanOrEqual(2800);
+    expect(menu).toContainEqual(expect.objectContaining({ type: 'highlight', target: 4 }));
+    expect(menu.some((e) => e.type === 'choose')).toBe(false);
   });
 
   it('12-swipes only undoes and redoes', () => {

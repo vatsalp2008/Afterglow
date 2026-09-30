@@ -10,6 +10,31 @@
       "t": 11985
     }
   ],
+  "menu": [
+    {
+      "type": "open",
+      "t": 1602
+    },
+    {
+      "type": "highlight",
+      "target": "center",
+      "t": 1644
+    },
+    {
+      "type": "highlight",
+      "target": 4,
+      "t": 3030
+    },
+    {
+      "type": "close",
+      "reason": "far",
+      "t": 5106
+    },
+    {
+      "type": "open",
+      "t": 11985
+    }
+  ],
   "penState": {
     "precision": 1,
     "recall": 1

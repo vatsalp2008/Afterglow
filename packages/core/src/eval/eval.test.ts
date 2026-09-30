@@ -18,7 +18,7 @@ import { filterRun } from './compare.ts';
 import { DEFAULT_PIPELINE, penTrack, replaySession, type Replay } from './pipeline.ts';
 
 function replay(drawing: Array<[number, boolean]>, events: InputEvent[] = [], durationMs = 100): Replay {
-  return { events, frames: drawing.map(([t, d]) => ({ t, drawing: d, hands: [] })), durationMs };
+  return { events, menu: [], frames: drawing.map(([t, d]) => ({ t, drawing: d, hands: [] })), durationMs };
 }
 
 const end = (t: number, handKey = 'hand-1'): InputEvent => ({ type: 'strokeEnd', t, handKey, reason: 'release' });
