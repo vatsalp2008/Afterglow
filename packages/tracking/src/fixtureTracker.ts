@@ -19,6 +19,13 @@ const browserScheduler: Scheduler = {
   },
 };
 
+/**
+ * A frame delivered this late means the page stalled (seconds of shader compilation on
+ * software WebGL, say). Playback then resumes from that moment instead of replaying the
+ * stalled stretch in a burst, which would pass through whole gestures too fast to see.
+ */
+export const STALL_MS = 250;
+
 export interface FixtureTrackerOptions {
   /** Start over after the last frame. */
   loop?: boolean;
@@ -75,11 +82,16 @@ export class FixtureTracker implements HandTracker {
       this.index = 0;
       frame = frames[0]!;
     }
-    const due = this.startedAt + frame.captureTime;
+    let due = this.startedAt + frame.captureTime;
     const current = frame;
     this.handle = this.scheduler.setTimeout(
       () => {
         const doneAt = this.scheduler.now();
+        if (doneAt - due > STALL_MS) {
+          // Later frames keep their recorded spacing from here.
+          this.startedAt += doneAt - due;
+          due = doneAt;
+        }
         onFrame(
           { frameId: this.frameId++, captureTime: due, hands: current.hands },
           {

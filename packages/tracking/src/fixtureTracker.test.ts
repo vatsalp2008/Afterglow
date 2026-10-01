@@ -21,6 +21,11 @@ class FakeScheduler implements Scheduler {
     this.queue = this.queue.filter((q) => q.id !== id);
   }
 
+  /** The page is busy for `ms`: time passes, but no timer runs until the next advance. */
+  stall(ms: number): void {
+    this.t += ms;
+  }
+
   advance(ms: number): void {
     const end = this.t + ms;
     for (;;) {
@@ -28,7 +33,8 @@ class FakeScheduler implements Scheduler {
       const next = this.queue[0];
       if (!next || next.at > end) break;
       this.queue.shift();
-      this.t = next.at;
+      // An overdue timer runs late, at the current time; the clock never goes back.
+      this.t = Math.max(this.t, next.at);
       next.fn();
     }
     this.t = end;
@@ -90,5 +96,27 @@ describe('FixtureTracker', () => {
     tracker.stop();
     scheduler.advance(1000);
     expect(frames).toHaveLength(1);
+  });
+});
+
+describe('FixtureTracker after a stall', () => {
+  it('resumes from the stall instead of replaying the stretch in a burst', () => {
+    const { scheduler, frames } = play();
+    scheduler.advance(0); // frame 0 at its time
+    scheduler.stall(2000); // the page is busy for 2 s
+    scheduler.advance(0); // frame 1 runs late
+    scheduler.advance(10);
+    // Frame 2 hasn't come yet: it keeps its 33 ms spacing after the late frame 1.
+    expect(frames.map((f) => f.captureTime)).toEqual([1000, 3000]);
+    scheduler.advance(33);
+    expect(frames.map((f) => f.captureTime)).toEqual([1000, 3000, 3033]);
+  });
+
+  it('plays frames that are only slightly late at their scheduled times', () => {
+    const { scheduler, frames } = play();
+    scheduler.advance(0);
+    scheduler.stall(100);
+    scheduler.advance(100);
+    expect(frames.map((f) => f.captureTime)).toEqual([1000, 1033, 1066]);
   });
 });
