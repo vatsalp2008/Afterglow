@@ -20,7 +20,9 @@ export type BuildResult =
 
 function toPoint(p: PenSample, t: number, frame: FrameSize): StrokePoint {
   const c = viewToCanvas(p, frame);
-  return { x: c.x, y: c.y, depth: p.depth, t };
+  const point: StrokePoint = { x: c.x, y: c.y, depth: p.depth, t };
+  if (p.angle !== undefined) point.angle = p.angle;
+  return point;
 }
 
 export class StrokeBuilder {

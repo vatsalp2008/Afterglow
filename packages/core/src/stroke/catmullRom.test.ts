@@ -24,3 +24,28 @@ describe('densify', () => {
     for (let i = 1; i < out.length; i++) expect(out[i]!.t).toBeGreaterThanOrEqual(out[i - 1]!.t);
   });
 });
+
+describe('densify with nib angles', () => {
+  it('interpolates the angle the short way round, and keeps points without one plain', () => {
+    const pts = densify(
+      [
+        { x: 0, y: 0, depth: 1, t: 0, angle: (170 * Math.PI) / 180 },
+        { x: 100, y: 0, depth: 1, t: 100, angle: (-170 * Math.PI) / 180 },
+      ],
+      10,
+    );
+    const mid = pts[Math.floor(pts.length / 2)]!;
+    // Halfway from 170° to 190° (−170°) is 180°, not 0°.
+    expect(Math.abs(Math.cos(mid.angle!))).toBeCloseTo(1, 3);
+    expect(Math.cos(mid.angle!)).toBeLessThan(0);
+    expect(
+      densify(
+        [
+          { x: 0, y: 0, depth: 1, t: 0 },
+          { x: 50, y: 0, depth: 1, t: 50 },
+        ],
+        10,
+      )[2],
+    ).not.toHaveProperty('angle');
+  });
+});

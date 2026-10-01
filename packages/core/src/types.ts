@@ -36,14 +36,16 @@ export interface HandFrame {
 
 export type PenState = 'idle' | 'hover' | 'drawing';
 
-export type BrushId = 'neon' | 'sparks' | 'ink';
+export type BrushId = 'neon' | 'sparks' | 'ink' | 'ribbon';
 
 /** A point on the input path, in view space (mirrored, normalized [0,1]). */
 export interface PenSample {
   x: number;
   y: number;
-  /** Depth factor: 1 is the calibrated neutral distance, larger is closer to the camera. */
+  /** Depth factor: 1 at the hand's usual distance, larger when it's closer to the camera. */
   depth: number;
+  /** The nib angle for the ribbon brush (canvas radians, y down; θ and θ + π are the same nib). */
+  angle?: number;
 }
 
 /** Commands made with a hand pose instead of drawing (gesture/tools.ts). */
@@ -67,6 +69,8 @@ export interface StrokePoint {
   depth: number;
   /** Session time in ms. */
   t: number;
+  /** The nib angle (see PenSample.angle), when the input had one. */
+  angle?: number;
 }
 
 export interface Stroke {

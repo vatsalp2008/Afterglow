@@ -98,3 +98,11 @@ describe('eraseStrokes', () => {
     expect(eraseStrokes([line()], [{ x: 50, y: 14 }], 5, ids()).removed).toHaveLength(0);
   });
 });
+
+describe('eraseStrokes with nib angles', () => {
+  it('keeps the angle on the pieces', () => {
+    const angled: Stroke = { ...line(), points: line().points.map((p) => ({ ...p, angle: 0.5 })) };
+    const { added } = eraseStrokes([angled], [{ x: 50, y: 0 }], 5, ids());
+    expect(added.every((s) => s.points.every((p) => p.angle === 0.5))).toBe(true);
+  });
+});

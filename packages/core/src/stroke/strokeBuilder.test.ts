@@ -59,3 +59,17 @@ describe('StrokeBuilder', () => {
     expect(b.activeStrokes()).toHaveLength(0);
   });
 });
+
+describe('StrokeBuilder with nib angles', () => {
+  it('carries the pen sample’s angle onto the stroke', () => {
+    const b = new StrokeBuilder(() => 'id');
+    const style = { brush: 'ribbon' as const, color: '#fff', size: 4 };
+    const frame = { width: 1000, height: 1000 };
+    const r = b.handle(
+      { type: 'strokeStart', t: 0, handKey: 'h', p: { x: 0.5, y: 0.5, depth: 1, angle: 0.3 } },
+      style,
+      frame,
+    );
+    expect(r.kind === 'start' && r.stroke.points[0]).toMatchObject({ angle: 0.3 });
+  });
+});

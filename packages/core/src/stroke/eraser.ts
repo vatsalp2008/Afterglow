@@ -3,7 +3,7 @@
 // `createId`; the caller swaps them in (History.replace) so erasing can be undone.
 
 import type { Stroke, StrokePoint, Vec2 } from '../types.ts';
-import { densify } from './catmullRom.ts';
+import { densify, interpolateAngle } from './catmullRom.ts';
 
 export interface EraseResult {
   /** Strokes the eraser touched, as they were. */
@@ -62,12 +62,15 @@ function subdivide(points: readonly StrokePoint[], maxGap: number): StrokePoint[
       const steps = Math.ceil(Math.hypot(p.x - prev.x, p.y - prev.y) / maxGap);
       for (let k = 1; k < steps; k++) {
         const u = k / steps;
-        out.push({
+        const point: StrokePoint = {
           x: prev.x + (p.x - prev.x) * u,
           y: prev.y + (p.y - prev.y) * u,
           depth: prev.depth + (p.depth - prev.depth) * u,
           t: prev.t + (p.t - prev.t) * u,
-        });
+        };
+        const angle = interpolateAngle(prev, p, u);
+        if (angle !== undefined) point.angle = angle;
+        out.push(point);
       }
     }
     out.push(p);

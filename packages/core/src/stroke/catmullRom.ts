@@ -3,6 +3,7 @@
 // curve through every sample. Centripetal parameterization (alpha = 0.5) avoids
 // the cusps and self-loops the uniform variant makes on unevenly spaced points.
 
+import { lerpAxial } from './angle.ts';
 import type { StrokePoint, Vec2 } from '../types.ts';
 
 const EPS = 1e-4;
@@ -35,6 +36,13 @@ function reflect(a: StrokePoint, b: StrokePoint): StrokePoint {
   return { x: 2 * a.x - b.x, y: 2 * a.y - b.y, depth: a.depth, t: a.t };
 }
 
+/** The nib angle between two points, the short way round; either one's angle if only it has one. */
+export function interpolateAngle(a: StrokePoint, b: StrokePoint, u: number): number | undefined {
+  if (a.angle === undefined) return b.angle;
+  if (b.angle === undefined) return a.angle;
+  return lerpAxial(a.angle, b.angle, u);
+}
+
 /** Resamples so consecutive points are at most ~`spacing` canvas units apart. */
 export function densify(points: readonly StrokePoint[], spacing: number): StrokePoint[] {
   if (points.length < 2) return points.slice();
@@ -48,12 +56,15 @@ export function densify(points: readonly StrokePoint[], spacing: number): Stroke
     for (let s = 1; s <= steps; s++) {
       const u = s / steps;
       const q = s === steps ? p2 : centripetal(p0, p1, p2, p3, u);
-      out.push({
+      const point: StrokePoint = {
         x: q.x,
         y: q.y,
         depth: p1.depth + (p2.depth - p1.depth) * u,
         t: p1.t + (p2.t - p1.t) * u,
-      });
+      };
+      const angle = interpolateAngle(p1, p2, u);
+      if (angle !== undefined) point.angle = angle;
+      out.push(point);
     }
   }
   return out;
