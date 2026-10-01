@@ -730,7 +730,7 @@ export class Studio {
     const identified = this.identity.assign({ ...frame, captureTime: frame.captureTime - this.t0 }, aspect);
     this.rawPens.clear();
     for (const h of identified.hands) {
-      this.rawPens.set(h.key, penSample(h.landmarks, aspect, this.pinch.config.neutralPalm));
+      this.rawPens.set(h.key, penSample(h.landmarks));
     }
 
     const filtered = this.filter.apply(identified);

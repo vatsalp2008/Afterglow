@@ -12,6 +12,7 @@
 import { landmarkToView } from '../coords.ts';
 import { LM } from '../hand.ts';
 import { dist, distToSegment, extension, toUnits } from './geometry.ts';
+import { DEFAULT_PEN_SHAPE, PenShape, type PenShapeConfig } from './penShape.ts';
 import type { HandFrame, HandKey, InputEvent, PenSample, PenState, Vec3 } from '../types.ts';
 
 export interface PinchConfig {
@@ -32,8 +33,8 @@ export interface PinchConfig {
   rejoinMs: number;
   /** Frames a hand may be missing before its stroke ends. */
   lossGraceFrames: number;
-  /** Palm size (wrist to middle knuckle, frame-height units) that maps to depth 1. */
-  neutralPalm: number;
+  /** Depth relative to the hand's usual size, and the ribbon's nib angle (penShape.ts). */
+  penShape: PenShapeConfig;
   /**
    * Weight of the thumb-to-fingertip-segment distance in the pinch measure. 0 measures
    * fingertip to fingertip only; see pinchMeasure.
@@ -65,7 +66,7 @@ export const DEFAULT_PINCH: PinchConfig = {
   exitMs: 100,
   rejoinMs: 250,
   lossGraceFrames: 4,
-  neutralPalm: 0.18,
+  penShape: DEFAULT_PEN_SHAPE,
   segmentWeight: 1.2,
   fistBelow: 1.4,
   fistIndexBelow: 1.1,
@@ -131,23 +132,15 @@ export function readsAsFist(
   return extension(u, 8, 5) < config.fistIndexBelow && fingerExtension(landmarks, aspect) < config.fistBelow;
 }
 
-/** Apparent palm length in frame-height units: a proxy for distance to the camera. */
-export function palmSize(landmarks: readonly Vec3[], aspect: number): number {
-  const a = landmarks[LM.wrist]!;
-  const b = landmarks[LM.middleMcp]!;
-  return Math.hypot((a.x - b.x) * aspect, a.y - b.y);
-}
-
-export function depthFactor(palm: number, neutralPalm: number): number {
-  return Math.min(2, Math.max(0.5, (palm / neutralPalm) ** 0.8));
-}
-
-/** Pen position: midpoint of thumb and index tips, in view space. */
-export function penSample(landmarks: readonly Vec3[], aspect: number, neutralPalm: number): PenSample {
+/**
+ * Pen position: the midpoint of the thumb and index tips, in view space. Depth and the
+ * nib angle come from the hand's PenShape, which keeps per-hand history.
+ */
+export function penSample(landmarks: readonly Vec3[], depth = 1, angle?: number): PenSample {
   const a = landmarks[LM.thumbTip]!;
   const b = landmarks[LM.indexTip]!;
   const mid = landmarkToView({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (a.z + b.z) / 2 });
-  return { x: mid.x, y: mid.y, depth: depthFactor(palmSize(landmarks, aspect), neutralPalm) };
+  return angle === undefined ? { x: mid.x, y: mid.y, depth } : { x: mid.x, y: mid.y, depth, angle };
 }
 
 // ---- transition table ------------------------------------------------------
@@ -243,6 +236,7 @@ interface HandPen {
   missing: number;
   ratio: number;
   fist: boolean;
+  shape: PenShape;
   held: Array<{ t: number; p: PenSample }>;
 }
 
@@ -265,7 +259,7 @@ export class PinchTracker {
   update(frame: HandFrame, aspect: number): InputEvent[] {
     const events: InputEvent[] = [];
     const t = frame.captureTime;
-    const { enter, exit, neutralPalm, segmentWeight } = this.config;
+    const { enter, exit, segmentWeight } = this.config;
     const seen = new Set<HandKey>();
 
     for (const hand of frame.hands) {
@@ -273,12 +267,15 @@ export class PinchTracker {
       const ratio = pinchMeasure(hand.landmarks, aspect, segmentWeight);
       const fist = readsAsFist(hand.landmarks, aspect, this.config);
       const outside = hand.landmarks.filter((q) => q.x < 0 || q.x > 1 || q.y < 0 || q.y > 1).length;
-      const p = penSample(hand.landmarks, aspect, neutralPalm);
       let h = this.hands.get(hand.key);
       if (!h) {
-        h = { state: 'hover', run: 0, since: t, missing: 0, ratio, fist, held: [] };
+        const shape = new PenShape(this.config.penShape);
+        h = { state: 'hover', run: 0, since: t, missing: 0, ratio, fist, shape, held: [] };
         this.hands.set(hand.key, h);
       }
+      const inStroke = h.state === 'drawing' || h.state === 'releasing' || h.state === 'lifted';
+      const { depth, angle } = h.shape.update(hand.landmarks, aspect, t, inStroke);
+      const p = penSample(hand.landmarks, depth, angle);
       h.missing = 0;
       h.ratio = ratio;
       h.fist = fist;

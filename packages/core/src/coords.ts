@@ -43,6 +43,14 @@ export function landmarkToView(p: Vec3): Vec3 {
   return { x: 1 - p.x, y: p.y, z: p.z };
 }
 
+/**
+ * The direction from landmark `a` to `b` as an angle on the canvas (mirrored like the
+ * view, x scaled by the frame aspect so the angle is true; y points down).
+ */
+export function landmarkAngleOnCanvas(a: Vec3, b: Vec3, aspect: number): number {
+  return Math.atan2(b.y - a.y, -(b.x - a.x) * aspect);
+}
+
 export function viewToCanvas(p: Vec2, frame: FrameSize): Vec2 {
   return { x: p.x * frame.width, y: p.y * frame.height };
 }

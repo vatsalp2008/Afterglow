@@ -21,3 +21,5 @@ export * from './eval/pipeline.ts';
 export * from './eval/compare.ts';
 export * from './gesture/tools.ts';
 export * from './gesture/menu.ts';
+export * from './gesture/penShape.ts';
+export * from './stroke/angle.ts';

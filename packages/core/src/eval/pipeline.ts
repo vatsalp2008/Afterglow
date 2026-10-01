@@ -89,7 +89,7 @@ export function replaySession(rec: SessionRecording, config: PipelineConfig = DE
       hands: filtered.hands.map((h) => ({
         key: h.key,
         ratio: status.get(h.key)?.ratio ?? Number.POSITIVE_INFINITY,
-        pen: penSample(h.landmarks, aspect, config.pinch.neutralPalm),
+        pen: penSample(h.landmarks),
       })),
     });
   }
