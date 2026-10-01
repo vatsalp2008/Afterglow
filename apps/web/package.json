@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "bench:tracker": "pnpm build && node scripts/bench-tracker.mjs"
+    "bench:tracker": "pnpm build && node scripts/bench-tracker.mjs",
+    "bench:render": "node scripts/bench-render.mjs"
   },
   "dependencies": {
     "@afterglow/core": "workspace:*",

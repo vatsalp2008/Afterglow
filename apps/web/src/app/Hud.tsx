@@ -105,7 +105,18 @@ export function Hud({ studio }: { studio: Studio }) {
         {tracking && (
           <Row label={`${from} to landmarks`} value={`${ms(stats.landmarkP50)} / ${ms(stats.landmarkP95)}`} />
         )}
-        {tracking && <Row label={`${from} to render`} value={`${ms(stats.inkP50)} / ${ms(stats.inkP95)}`} />}
+        {tracking && (
+          <Row
+            label={`${s.inputMode === 'fixture' ? 'Recorded frame' : from} to ink on screen`}
+            value={`${ms(stats.inkP50)} / ${ms(stats.inkP95)}`}
+          />
+        )}
+        <Row label="Frame cost" value={`${ms(stats.frameP50)} / ${ms(stats.frameP95)}`} />
+        <Row
+          label="Draw calls"
+          value={`${String(stats.drawCalls)}, ${(stats.triangles / 1000).toFixed(0)}k triangles`}
+        />
+        <Row label="GPU geometries" value={String(stats.geometries)} />
         {camera && (
           <Row
             label="Dropped frames"

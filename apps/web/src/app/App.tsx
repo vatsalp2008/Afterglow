@@ -9,6 +9,7 @@ import { GesturesHelp, Hint, Toast } from './Overlay';
 import { RadialMenu } from './RadialMenu';
 import { useShortcuts } from './shortcuts';
 import { useStudioStore } from './store';
+import { RenderBench } from './RenderBench';
 import { TrackerBench } from './TrackerBench';
 
 // Developer tools: ?fixture=<name>[&loop], ?record=fixtures, ?bench=tracker
@@ -81,6 +82,7 @@ export function App() {
           {params.get('record') === 'fixtures' && <FixtureCapture studio={studio} />}
           {params.get('record') === 'guest' && <FixtureCapture studio={studio} guest />}
           {params.get('bench') === 'tracker' && <TrackerBench studio={studio} />}
+          {params.get('bench') === 'render' && <RenderBench studio={studio} />}
         </>
       )}
       <Toast />

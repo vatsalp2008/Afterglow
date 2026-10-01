@@ -16,6 +16,7 @@ import {
 } from '@afterglow/core';
 import type { CameraDevice, CameraErrorKind, CameraResolution } from '@afterglow/tracking';
 import { PALETTE } from '@afterglow/ui/tokens';
+import type { RenderBenchResult } from '../studio/renderBench';
 import type { BlockSummary } from '../studio/trackerBench';
 import type { SizeId } from './brushes';
 
@@ -34,8 +35,16 @@ export interface Stats {
   renderFps: number;
   landmarkP50: number | null;
   landmarkP95: number | null;
+  /** Capture (or a recorded frame's due time) to the ink it caused being on screen, ms. */
   inkP50: number | null;
   inkP95: number | null;
+  /** CPU time per rendered frame: syncing strokes, rendering, cursors, ms. */
+  frameP50: number | null;
+  frameP95: number | null;
+  drawCalls: number;
+  triangles: number;
+  /** Geometries held on the GPU, to spot leaks. */
+  geometries: number;
   mainThreadP50: number | null;
   mainThreadP95: number | null;
   hasCaptureTime: boolean;
@@ -109,6 +118,7 @@ export interface StudioState {
   /** A hand session (fixture) is being recorded. */
   session: { scenario: string | null } | null;
   bench: BenchState | null;
+  renderBench: { status: 'running' | 'done' | 'error'; progress: string; result: RenderBenchResult | null } | null;
   toast: { id: number; text: string } | null;
   reducedMotion: boolean;
 }
@@ -147,6 +157,11 @@ export const useStudioStore = create<StudioState>()(() => ({
     landmarkP95: null,
     inkP50: null,
     inkP95: null,
+    frameP50: null,
+    frameP95: null,
+    drawCalls: 0,
+    triangles: 0,
+    geometries: 0,
     mainThreadP50: null,
     mainThreadP95: null,
     hasCaptureTime: false,
@@ -167,6 +182,7 @@ export const useStudioStore = create<StudioState>()(() => ({
   recordingVideo: false,
   session: null,
   bench: null,
+  renderBench: null,
   toast: null,
   reducedMotion,
 }));

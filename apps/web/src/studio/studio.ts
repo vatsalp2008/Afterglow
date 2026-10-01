@@ -59,9 +59,10 @@ import { download, downloadJson, stamp } from './download';
 import { loadFixture } from './fixtures';
 import type { Scenario } from './scenarios';
 import { SessionCapture } from './sessionCapture';
-import { STRESS_STROKES, stressStrokes } from './stress';
-import { RateCounter, RollingStats } from './telemetry';
+import { stressCount, stressStrokes } from './stress';
+import { percentile, RateCounter, RollingStats } from './telemetry';
 import { TimelapseRecorder } from './timelapseRecorder';
+import { median, summarizeScene, type FrameSamples, type RenderBenchResult } from './renderBench';
 import { BenchCollector, type BlockSummary } from './trackerBench';
 
 const FADE_TAU_MS = 2600;
@@ -101,6 +102,10 @@ function showGesturesOnce(): void {
     // Storage unavailable: show it this time anyway.
   }
   useStudioStore.setState({ helpOpen: true });
+}
+
+function renderStats(s: { calls: number; triangles: number; geometries: number }) {
+  return { drawCalls: s.calls, triangles: s.triangles, geometries: s.geometries };
 }
 
 function countGesture(name: ToolGesture): void {
@@ -166,7 +171,17 @@ export class Studio {
   private hasCaptureTime = false;
   private droppedFrames = 0;
   private skippedFrames = 0;
-  private pendingCapture: number | null = null;
+  // Capture-to-ink: the capture time of the tracker frame being handled, the oldest one
+  // whose ink hasn't been drawn yet, and the one drawn last frame (measured at the next
+  // animation frame, when it has been presented).
+  private frameCapture: number | null = null;
+  private inkCapture: number | null = null;
+  private inkDrawn: number | null = null;
+  private frameCost = new RollingStats();
+  // Render benchmark (?bench=render): wait for the GPU after each frame, and collect frames and ink latency.
+  private gpuSync = false;
+  private benchFrames: FrameSamples | null = null;
+  private inkSamples: number[] | null = null;
   private lastStatsAt = 0;
   private lastFrameAt = performance.now();
   private raf = 0;
@@ -253,7 +268,7 @@ export class Studio {
   }
 
   /** Replays a recorded session from fixtures/sessions instead of a camera. */
-  async startFixture(name: string, loop = false): Promise<void> {
+  async startFixture(name: string, loop = false, onDone?: () => void): Promise<void> {
     const set = useStudioStore.setState;
     set({ phase: 'starting', error: null, loadingMessage: `Loading fixture ${name}` });
     let recording: SessionRecording;
@@ -272,6 +287,7 @@ export class Studio {
       onEnd: () => {
         this.finishTrackedStrokes();
         showToast(`Fixture ${name} finished`);
+        onDone?.();
       },
     });
     set({ inputMode: 'fixture' });
@@ -330,11 +346,12 @@ export class Studio {
     this.renderer.sparks.clear();
     this.resize();
 
-    const stress = new URLSearchParams(location.search).has('stress');
-    if (stress) {
-      for (const s of stressStrokes(this.frame, this.now(), newId)) this.history.add(s);
+    const stress = new URLSearchParams(location.search).get('stress');
+    if (stress !== null) {
+      const count = stressCount(stress);
+      for (const s of stressStrokes(this.frame, this.now(), newId, count)) this.history.add(s);
       useStudioStore.setState({ fade: false });
-      showToast(`Stress test: ${STRESS_STROKES} synthetic strokes`);
+      showToast(`Stress test: ${String(count)} synthetic strokes`);
     }
     this.renderer.setFadeTau(this.currentFadeTau());
     this.renderer.setDarkroom(this.view().darkroom ? 1 : 0);
@@ -540,6 +557,150 @@ export class Studio {
     }
   }
 
+  /**
+   * The render benchmark: frame cost as the canvas fills (0 to 1000 synthetic strokes),
+   * an eraser gesture across 500 strokes, live strokes of growing length, and ink latency
+   * while a recorded session draws. Fading is off throughout.
+   */
+  async runRenderBench(): Promise<void> {
+    if (this.mode !== 'studio' || this.replay) return;
+    const progress = (text: string) =>
+      useStudioStore.setState({ renderBench: { status: 'running', progress: text, result: null } });
+    useStudioStore.setState({ fade: false });
+    const result: RenderBenchResult = {
+      environment: {},
+      scenes: [],
+      erase: null,
+      live: [],
+      sparks: null,
+      latency: null,
+    };
+    try {
+      for (const count of [0, 100, 250, 500, 1000]) {
+        progress(`${String(count)} strokes`);
+        this.loadBenchStrokes(count);
+        await sleep(1000);
+        const free = await this.sampleFrames(3000, false);
+        const synced = await this.sampleFrames(1500, true);
+        result.scenes.push(summarizeScene(count, free, synced, this.renderer.stats()));
+      }
+      progress('Erasing across 500 strokes');
+      this.loadBenchStrokes(500);
+      await sleep(1000);
+      result.erase = await this.benchErase();
+      progress('Live strokes');
+      result.live = this.benchLive();
+      result.sparks = this.benchSparks();
+      result.environment = this.benchEnvironment();
+      progress('Ink latency during a recorded session');
+      this.history.clear();
+      this.inkSamples = [];
+      await new Promise<void>((resolve) => void this.startFixture('03-fast-zigzag', false, resolve));
+      const samples = this.inkSamples;
+      this.inkSamples = null;
+      result.latency = {
+        source:
+          'recorded session 03-fast-zigzag: from each frame being due to its ink on screen (no camera or inference)',
+        samples: samples.length,
+        p50: percentile(samples, 50),
+        p95: percentile(samples, 95),
+      };
+      useStudioStore.setState({ renderBench: { status: 'done', progress: 'Done', result } });
+    } catch (err) {
+      console.error('[studio] render bench failed', err);
+      useStudioStore.setState({ renderBench: { status: 'error', progress: String(err), result: null } });
+    } finally {
+      this.gpuSync = false;
+      this.benchFrames = null;
+      this.inkSamples = null;
+    }
+  }
+
+  private loadBenchStrokes(count: number): void {
+    this.history.clear();
+    for (const s of stressStrokes(this.frame, this.now(), newId, count)) this.history.add(s);
+  }
+
+  private async sampleFrames(ms: number, gpuSync: boolean): Promise<FrameSamples> {
+    this.gpuSync = gpuSync;
+    const frames: FrameSamples = { interval: [], cost: [] };
+    this.benchFrames = frames;
+    await sleep(ms);
+    this.benchFrames = null;
+    this.gpuSync = false;
+    return frames;
+  }
+
+  /** A medium eraser dragged across the middle of the canvas, one step per frame. */
+  private async benchErase(): Promise<RenderBenchResult['erase']> {
+    const strokesBefore = this.history.strokes.length;
+    const y = this.frame.height / 2;
+    const group = newId();
+    const erase: number[] = [];
+    const frames: FrameSamples = { interval: [], cost: [] };
+    let last = { x: 0, y };
+    const steps = 20;
+    for (let i = 1; i <= steps; i++) {
+      const at = { x: (this.frame.width * i) / steps, y };
+      const started = performance.now();
+      const { removed, added } = eraseStrokes(this.history.strokes, [last, at], ERASER_RADII.m, newId);
+      this.history.replace(removed, added, group);
+      erase.push(performance.now() - started);
+      last = at;
+      this.benchFrames = frames;
+      await nextFrame();
+      await nextFrame();
+      this.benchFrames = null;
+    }
+    return {
+      steps,
+      strokesBefore,
+      strokesAfter: this.history.strokes.length,
+      eraseP50: percentile(erase, 50),
+      eraseP95: percentile(erase, 95),
+      frameP95: percentile(frames.cost, 95),
+    };
+  }
+
+  /** Rebuild time of a live stroke as it grows; it's rebuilt once per input frame while drawing. */
+  private benchLive(): RenderBenchResult['live'] {
+    const out: RenderBenchResult['live'] = [];
+    for (const points of [100, 500, 1000, 2000]) {
+      const [stroke] = stressStrokes(this.frame, this.now(), newId, 1);
+      const long = {
+        ...stroke!,
+        points: Array.from({ length: points }, (_, i) => {
+          const a = i / 40;
+          return { x: 600 + Math.cos(a) * (50 + i * 0.1), y: 500 + Math.sin(a) * (50 + i * 0.1), depth: 1, t: i * 16 };
+        }),
+      };
+      const times: number[] = [];
+      for (let run = 0; run < 10; run++) {
+        const started = performance.now();
+        this.renderer.setLive([long]);
+        times.push(performance.now() - started);
+      }
+      out.push({ points, rebuildMs: median(times) });
+    }
+    this.renderer.setLive([]);
+    this.liveDirty = true;
+    return out;
+  }
+
+  /** The particle system full (every slot alive), updated as one frame at a time. */
+  private benchSparks(): RenderBenchResult['sparks'] {
+    const sparks = this.renderer.sparks;
+    for (let i = 0; i < 100; i++) sparks.emitAlong({ x: 200, y: 500 }, { x: 1100, y: 500 }, '#FFB547', 40);
+    const times: number[] = [];
+    for (let frame = 0; frame < 60; frame++) {
+      const started = performance.now();
+      sparks.update(1 / 60);
+      times.push(performance.now() - started);
+    }
+    sparks.clear();
+    return { particles: 4000, updateMs: median(times) };
+  }
+
   benchEnvironment(): Record<string, unknown> {
     return {
       userAgent: navigator.userAgent,
@@ -560,7 +721,7 @@ export class Studio {
     this.hasCaptureTime = timing.hasCaptureTime;
     this.droppedFrames = timing.droppedFrames;
     this.skippedFrames = timing.skippedFrames;
-    this.pendingCapture = timing.captureTime;
+    this.frameCapture = timing.captureTime;
     this.bench?.onTrackerFrame(timing);
     this.session.push(frame);
 
@@ -591,6 +752,7 @@ export class Studio {
     this.handleEvents(penEvents.filter((e) => !this.gestureMenu.blocks(e)));
     this.handleMenu(menuEvents, filtered, aspect);
     if (!wasOpen) this.handleGestures(gestures);
+    this.frameCapture = null;
     for (const key of this.pens.keys()) if (key !== POINTER_KEY && !tracked.has(key)) this.pens.delete(key);
   };
 
@@ -648,6 +810,7 @@ export class Studio {
     const radius = ERASER_RADII[useStudioStore.getState().size];
     const { removed, added } = eraseStrokes(this.history.strokes, path, radius, newId);
     this.history.replace(removed, added, group);
+    if (removed.length > 0) this.markInk();
   }
 
   private handleMenu(events: readonly MenuEvent[], filtered: HandFrame, aspect: number): void {
@@ -715,6 +878,7 @@ export class Studio {
   private applyBuild(r: BuildResult): void {
     if (r.kind === 'none') return;
     this.liveDirty = true;
+    if (r.kind !== 'end') this.markInk();
     if (r.kind === 'move' && r.stroke.brush === 'sparks' && !this.reducedMotion) {
       this.renderer.emitSparks(r.from, r.to, r.stroke.color);
     }
@@ -772,8 +936,21 @@ export class Studio {
 
   // ---- frame loop ----------------------------------------------------------
 
+  /** Ink changed because of the tracker frame being handled: time it until it's on screen. */
+  private markInk(): void {
+    if (this.frameCapture !== null && this.inkCapture === null) this.inkCapture = this.frameCapture;
+  }
+
   private tick = (ts: number): void => {
     this.raf = requestAnimationFrame(this.tick);
+    const startedAt = performance.now();
+    // This frame starts once the last one is on screen: that completes its ink's latency.
+    if (this.inkDrawn !== null) {
+      this.inkLatency.push(ts - this.inkDrawn);
+      this.inkSamples?.push(ts - this.inkDrawn);
+      this.inkDrawn = null;
+    }
+    const interval = ts - this.lastFrameAt;
     this.bench?.onRenderFrame(ts - this.lastFrameAt);
     const dt = Math.min(0.1, Math.max(0, (ts - this.lastFrameAt) / 1000));
     this.lastFrameAt = ts;
@@ -800,13 +977,20 @@ export class Studio {
     }
 
     this.renderer.render(fadeNow, dt);
-    if (this.pendingCapture !== null) {
-      this.inkLatency.push(performance.now() - this.pendingCapture);
-      this.pendingCapture = null;
+    if (this.gpuSync) this.renderer.waitForGpu();
+    if (this.inkCapture !== null) {
+      this.inkDrawn = this.inkCapture;
+      this.inkCapture = null;
     }
     this.renderRate.tick(ts);
     this.drawCursors();
     if (this.overlayDirty) this.drawOverlay();
+    const cost = performance.now() - startedAt;
+    this.frameCost.push(cost);
+    if (this.benchFrames) {
+      this.benchFrames.interval.push(interval);
+      this.benchFrames.cost.push(cost);
+    }
     if (ts - this.lastStatsAt > 250) {
       this.lastStatsAt = ts;
       this.publishStats(ts);
@@ -951,6 +1135,9 @@ export class Studio {
         landmarkP95: this.landmarkLatency.percentile(95),
         inkP50: this.inkLatency.percentile(50),
         inkP95: this.inkLatency.percentile(95),
+        frameP50: this.frameCost.percentile(50),
+        frameP95: this.frameCost.percentile(95),
+        ...renderStats(this.renderer.stats()),
         mainThreadP50: this.mainThreadCost.percentile(50),
         mainThreadP95: this.mainThreadCost.percentile(95),
         hasCaptureTime: this.hasCaptureTime,
