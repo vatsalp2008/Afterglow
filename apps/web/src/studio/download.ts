@@ -12,6 +12,14 @@ export function downloadJson(value: unknown, name: string): void {
 }
 
 /** A filesystem-safe local timestamp, e.g. 2026-09-28-14-03-12. */
-export function stamp(): string {
-  return new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+export function stamp(date = new Date()): string {
+  const two = (n: number) => String(n).padStart(2, '0');
+  return [
+    date.getFullYear(),
+    two(date.getMonth() + 1),
+    two(date.getDate()),
+    two(date.getHours()),
+    two(date.getMinutes()),
+    two(date.getSeconds()),
+  ].join('-');
 }

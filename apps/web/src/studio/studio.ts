@@ -419,9 +419,16 @@ export class Studio {
   }
 
   async saveStill(): Promise<void> {
-    // Long exposure: every stroke at full brightness, regardless of fade.
+    if (this.history.strokes.length === 0 && !this.replay) {
+      showToast('Nothing to save yet. Draw something first.');
+      return;
+    }
+    // Long exposure: every stroke at full brightness, regardless of fade. Light only: the
+    // camera image never goes into a file meant to be shared.
     this.renderer.setFadeTau(0);
+    this.renderer.setVideoOpacity(0);
     const pending = this.renderer.snapshot(this.replay ? this.now() - this.replay.startedAt : this.now());
+    this.renderer.setVideoOpacity(this.replay ? 0 : 1);
     this.renderer.setFadeTau(this.currentFadeTau());
     try {
       download(await pending, `afterglow-${stamp()}.png`);
