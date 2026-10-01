@@ -1,6 +1,6 @@
 import type { Stroke } from '@afterglow/core';
 import { describe, expect, it } from 'vitest';
-import { buildRibbon } from './ribbon';
+import { buildStrip } from './strip';
 
 function stroke(points: Array<[number, number]>): Stroke {
   return {
@@ -13,21 +13,21 @@ function stroke(points: Array<[number, number]>): Stroke {
   };
 }
 
-const attr = (geo: ReturnType<typeof buildRibbon>, name: string) => Array.from(geo.getAttribute(name).array);
+const attr = (geo: ReturnType<typeof buildStrip>, name: string) => Array.from(geo.getAttribute(name).array);
 
-describe('buildRibbon', () => {
+describe('buildStrip', () => {
   it('returns empty geometry for a stroke without points', () => {
-    expect(buildRibbon(stroke([]), 1).getAttribute('position')).toBeUndefined();
+    expect(buildStrip(stroke([]), 1).getAttribute('position')).toBeUndefined();
   });
 
   it('draws a single point as a filled disc', () => {
-    const geo = buildRibbon(stroke([[5, 5]]), 1);
+    const geo = buildStrip(stroke([[5, 5]]), 1);
     expect(geo.getAttribute('position').count).toBe(18); // center + 17 rim vertices
     expect(geo.getIndex()?.count).toBe(16 * 3);
   });
 
   it('builds a ribbon of the stroke width with a round cap at each end', () => {
-    const geo = buildRibbon(
+    const geo = buildStrip(
       stroke([
         [0, 0],
         [2, 0],
@@ -45,7 +45,7 @@ describe('buildRibbon', () => {
 
   it('keeps the across coordinate within [-1, 1] for the shader', () => {
     const across = attr(
-      buildRibbon(
+      buildStrip(
         stroke([
           [0, 0],
           [30, 10],
@@ -65,7 +65,7 @@ describe('buildRibbon', () => {
       [2, 0],
     ]);
     for (const p of near.points) p.depth = 2;
-    const y = attr(buildRibbon(near, 1), 'position')[1]!;
+    const y = attr(buildStrip(near, 1), 'position')[1]!;
     expect(Math.abs(y)).toBeCloseTo(10, 9);
   });
 });

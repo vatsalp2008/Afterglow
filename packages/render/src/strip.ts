@@ -1,17 +1,19 @@
-// Stroke geometry: a triangle ribbon along the densified path with round caps.
+// Stroke geometry for neon, sparks, and ink: a triangle strip along the densified path
+// with round caps.
 // `aAcross` runs -1..1 across the ribbon and 0..1 from cap center to rim, so the
 // fragment shader can shade a hot core and soft edge from |aAcross| alone.
 
 import { BufferGeometry, Color, Float32BufferAttribute } from 'three';
 import { densify, type Stroke, type StrokePoint } from '@afterglow/core';
 
-const SPACING = 2.5;
+export const SPACING = 2.5;
 const CAP_SEGMENTS = 8;
 const DISC_SEGMENTS = 16;
 
-const clampDepth = (d: number) => Math.min(2.2, Math.max(0.4, d));
+export const clampDepth = (d: number) => Math.min(2.2, Math.max(0.4, d));
 
-export function buildRibbon(stroke: Stroke, widthScale: number): BufferGeometry {
+/** `intensity` scales the brightness, so brushes can share a material (the sparks core runs hotter). */
+export function buildStrip(stroke: Stroke, widthScale: number, intensity = 1): BufferGeometry {
   const pts = densify(stroke.points, SPACING);
   const color = new Color(stroke.color);
   const position: number[] = [];
@@ -27,7 +29,7 @@ export function buildRibbon(stroke: Stroke, widthScale: number): BufferGeometry 
     position.push(x, y, 0);
     across.push(a);
     time.push(p.t);
-    bright.push(0.55 + 0.45 * clampDepth(p.depth));
+    bright.push((0.55 + 0.45 * clampDepth(p.depth)) * intensity);
     tint.push(color.r, color.g, color.b);
     return count++;
   };

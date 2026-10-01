@@ -50,6 +50,20 @@ const neonFragment = /* glsl */ `
   }
 `;
 
+// A lit ribbon: bright rims and a softer middle, so it reads as a band of light that turns.
+const ribbonFragment = /* glsl */ `
+  varying float vAcross;
+  varying float vFade;
+  varying float vBright;
+  varying vec3 vColor;
+  void main() {
+    float d = abs(vAcross);
+    float rim = smoothstep(0.55, 1.0, d);
+    vec3 col = vColor * (0.7 + 1.1 * rim) + vec3(1.0, 0.95, 0.88) * rim * rim * 0.5;
+    gl_FragColor = vec4(col * vFade * vBright, 1.0);
+  }
+`;
+
 const inkFragment = /* glsl */ `
   varying float vAcross;
   varying float vFade;
@@ -67,6 +81,19 @@ export function createNeonMaterial(fade: FadeUniforms, intensity: number): Shade
     uniforms: { ...fade, uIntensity: { value: intensity } },
     vertexShader,
     fragmentShader: neonFragment,
+    blending: AdditiveBlending,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    side: DoubleSide,
+  });
+}
+
+export function createRibbonMaterial(fade: FadeUniforms): ShaderMaterial {
+  return new ShaderMaterial({
+    uniforms: { ...fade },
+    vertexShader,
+    fragmentShader: ribbonFragment,
     blending: AdditiveBlending,
     transparent: true,
     depthTest: false,

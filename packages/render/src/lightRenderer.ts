@@ -21,9 +21,12 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { coverScale, visibleCanvasRect, type FrameSize, type Stroke, type Vec2, type Viewport } from '@afterglow/core';
 import { CompositeShader } from './composite';
-import { createFadeUniforms, createInkMaterial, createNeonMaterial } from './materials';
-import { buildRibbon } from './ribbon';
+import { BRUSH_SPECS, type MaterialId } from './brushes';
+import { createFadeUniforms, createInkMaterial, createNeonMaterial, createRibbonMaterial } from './materials';
 import { Sparks } from './sparks';
+
+/** A fading stroke this many time constants old is below what 8-bit color can show, and is skipped. */
+const CULL_AFTER_TAUS = 10;
 
 export class LightRenderer {
   readonly gl: WebGLRenderer;
@@ -32,9 +35,11 @@ export class LightRenderer {
   private lightScene = new Scene();
   private inkScene = new Scene();
   private fade = createFadeUniforms();
-  private neon = createNeonMaterial(this.fade, 1);
-  private sparkCore = createNeonMaterial(this.fade, 1.4);
-  private ink = createInkMaterial(this.fade);
+  private materials: Record<MaterialId, ShaderMaterial> = {
+    neon: createNeonMaterial(this.fade, 1),
+    ink: createInkMaterial(this.fade),
+    ribbon: createRibbonMaterial(this.fade),
+  };
   private bloomComposer: EffectComposer;
   private finalComposer: EffectComposer;
   private bloomPass: UnrealBloomPass;
@@ -151,6 +156,11 @@ export class LightRenderer {
   render(now: number, dtSec: number): void {
     this.gl.info.reset();
     this.fade.uNow.value = now;
+    // Decided at render time, so a long-exposure snapshot (fade off) still draws everything.
+    const tau = this.fade.uFadeTau.value;
+    for (const mesh of this.meshes.values()) {
+      mesh.visible = tau <= 0 || now - (mesh.userData['newest'] as number) < CULL_AFTER_TAUS * tau;
+    }
     if (this.grainAnimated) this.composite.uniforms['uTime']!.value = now / 1000;
     this.sparks.update(dtSec);
     this.bloomComposer.render(dtSec);
@@ -192,7 +202,7 @@ export class LightRenderer {
     this.setStrokes([]);
     this.video?.dispose();
     this.sparks.dispose();
-    for (const m of [this.neon, this.sparkCore, this.ink]) m.dispose();
+    for (const m of Object.values(this.materials)) m.dispose();
     this.bloomPass.dispose();
     this.bloomComposer.dispose();
     this.finalComposer.dispose();
@@ -200,17 +210,11 @@ export class LightRenderer {
   }
 
   private addMesh(s: Stroke): Mesh {
-    let material: ShaderMaterial = this.neon;
-    let widthScale = 1;
-    if (s.brush === 'sparks') {
-      material = this.sparkCore;
-      widthScale = 0.35;
-    } else if (s.brush === 'ink') {
-      material = this.ink;
-    }
-    const mesh = new Mesh(buildRibbon(s, widthScale), material);
+    const spec = BRUSH_SPECS[s.brush];
+    const mesh = new Mesh(spec.build(s), this.materials[spec.material]);
     mesh.frustumCulled = false;
-    (s.brush === 'ink' ? this.inkScene : this.lightScene).add(mesh);
+    mesh.userData['newest'] = s.points[s.points.length - 1]?.t ?? s.createdAt;
+    (spec.layer === 'ink' ? this.inkScene : this.lightScene).add(mesh);
     return mesh;
   }
 
