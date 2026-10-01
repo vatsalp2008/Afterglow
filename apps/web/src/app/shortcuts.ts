@@ -2,11 +2,11 @@ import { useEffect } from 'react';
 import type { BrushId } from '@afterglow/core';
 import { BRUSH_COLORS } from '@afterglow/ui/tokens';
 import type { Studio } from '../studio/studio';
-import { command, isEnabled } from './commands';
+import { BRUSHES, command, isEnabled } from './commands';
 import { useStudioStore } from './store';
 import type { SizeId } from './brushes';
 
-const BRUSH_ORDER: BrushId[] = ['neon', 'sparks', 'ink'];
+const BRUSH_ORDER: BrushId[] = BRUSHES.map((b) => b.id);
 const SIZE_ORDER: SizeId[] = ['s', 'm', 'l'];
 
 export function useShortcuts(studio: Studio | null): void {

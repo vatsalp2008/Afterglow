@@ -18,6 +18,7 @@ import {
   PlayIcon,
   RecordIcon,
   RedoIcon,
+  RibbonIcon,
   SparksIcon,
   StillIcon,
   StopIcon,
@@ -45,6 +46,7 @@ export interface Command {
 export const BRUSHES: Array<{ id: BrushId; label: string; icon: ReactNode }> = [
   { id: 'neon', label: 'Neon', icon: <NeonIcon /> },
   { id: 'sparks', label: 'Sparks', icon: <SparksIcon /> },
+  { id: 'ribbon', label: 'Ribbon', icon: <RibbonIcon /> },
   { id: 'ink', label: 'Ink, no glow', icon: <InkIcon /> },
 ];
 

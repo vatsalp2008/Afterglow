@@ -31,6 +31,13 @@ export const SparksIcon = () => (
   </Icon>
 );
 
+export const RibbonIcon = () => (
+  <Icon>
+    <path d="M3 13.5c2.5-6 5-6 7-1.5s4.5 4.5 7-1.5" />
+    <path d="M3 8.5c2.5-6 5-6 7-1.5s4.5 4.5 7-1.5" opacity="0.55" />
+  </Icon>
+);
+
 export const InkIcon = () => (
   <Icon>
     <path d="M10 3c3 4 5 6.3 5 8.8a5 5 0 0 1-10 0C5 9.3 7 7 10 3z" />
