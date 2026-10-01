@@ -71,6 +71,67 @@ The first version of the benchmark kept both MediaPipe instances alive at once. 
 
 After both changes, the worker tracked every frame at 30 fps.
 
+## Rendering (Phase 3)
+
+These results decided [ADR 0010](adr/0010-light-rendering.md).
+
+**Reproduce:** `pnpm --filter @afterglow/web build && pnpm --filter @afterglow/web bench:render [-- --label NAME]`. It serves the production build and runs `?bench=render` in headless Chrome. The raw results are in [`benchmarks/data/render-*.json`](benchmarks/data).
+
+|          |                                                                              |
+| -------- | ---------------------------------------------------------------------------- |
+| Machine  | MacBook Pro (Mac15,7), Apple M3 Pro                                          |
+| Browser  | Chrome, headless, WebGL via ANGLE Metal (real GPU)                           |
+| Viewport | 1440x900 at pixel ratio 2 (the studio's cap), fade off                       |
+| Strokes  | `?stress=N`: 20 to 200 points each, sampled every 16 to 33 ms, mixed brushes |
+
+**Method:**
+
+- **Frame interval** is the time between animation frames. Headless Chrome caps it at 60 Hz, so it shows missed frames, not headroom.
+- **CPU** is the time spent in each frame: syncing strokes, rendering, cursors.
+- **CPU + GPU** renders each frame and then reads back one pixel, which waits for the GPU to finish. That is the real cost, and the headroom under 16.7 ms.
+- **Draw calls** count every pass in the frame.
+
+### Frame cost as the canvas fills
+
+"Before" is the code at the start of Phase 3, and "after" its end. Neither batches strokes. The difference is within run-to-run noise.
+
+| Strokes | Draw calls | Before: CPU p95 | Before: CPU + GPU p95 | After: CPU p95 | After: CPU + GPU p95 | Slow frames |
+| ------- | ---------- | --------------- | --------------------- | -------------- | -------------------- | ----------- |
+| 0       | 16         | 1.0 ms          | 8.8 ms                | 1.0 ms         | 8.7 ms               | 0%          |
+| 100     | 116        | 1.6 ms          | 9.5 ms                | 1.4 ms         | 9.8 ms               | 0%          |
+| 250     | 266        | 1.7 ms          | 9.2 ms                | 1.9 ms         | 11.3 ms              | 0%          |
+| 500     | 516        | 2.4 ms          | 11.6 ms               | 2.9 ms         | 12.1 ms              | 0%          |
+| 1000    | 1016       | 1.8 ms          | 12.6 ms               | 1.8 ms         | 12.4 ms              | 0%          |
+
+- **The gate is met: 500 strokes at 60 FPS with no slow frames,** and even 1000 strokes use 12.4 ms of the 16.7 ms frame.
+- **Most of the cost is fixed:** bloom and the darkroom composite at full Retina resolution take 8.7 ms on an empty canvas.
+- **A thousand draw calls cost under 2 ms of CPU,** so batching strokes isn't worth its complexity yet.
+
+### Other costs (after)
+
+| Measure                                         | Result                               |
+| ----------------------------------------------- | ------------------------------------ |
+| Eraser dragged across 500 strokes, per step     | 0.4 ms p50, 7.2 ms p95 (20 steps)    |
+| Frames right after each erase step (rebuilding) | 4.2 ms p95                           |
+| Rebuilding a live stroke, once per input frame  | 0.1 ms at 500 points, 0.5 ms at 2000 |
+| Moving and uploading all 4000 spark particles   | 0.1 ms a frame                       |
+
+### Capture to ink on screen
+
+Measured from the capture of the camera frame that changed the ink to the next animation frame after the render that drew it, which is when the ink is on screen. Only frames that change ink count.
+
+The fake webcam's hand never pinches, so the full path can't be measured headlessly. It's measured in two halves:
+
+| Part                                                                   | p50        | p95         |
+| ---------------------------------------------------------------------- | ---------- | ----------- |
+| Camera capture to landmarks on the main thread (worker tracker, above) | 29–35 ms   | 35–48 ms    |
+| Landmarks to ink on screen (recording `03-fast-zigzag` played back)    | 28 ms      | 31 ms       |
+| **Capture to ink**                                                     | **~60 ms** | **≤ 80 ms** |
+
+- **The rendering half is about 1.5 display frames.** Input lands partway through a frame, the next frame draws it, and the one after shows it.
+- **The total is a sum of the two halves.** The p95 total adds the two p95s, so it's an upper bound.
+- **The live number with a real camera** is in the stats panel (H) as "Capture to ink on screen".
+
 ## Input pipeline on the recorded fixtures (Phase 2)
 
 These results decided [ADR 0004](adr/0004-hand-identity-by-position.md) and [ADR 0005](adr/0005-pinch-detection.md).
