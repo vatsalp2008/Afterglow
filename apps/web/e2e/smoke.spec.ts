@@ -86,11 +86,21 @@ test('frees GPU geometry when strokes go away', async ({ page }) => {
     for (let i = 1; i <= 8; i++) await page.mouse.move(300 + i * 50, y + (i % 2) * 20);
     await page.mouse.up();
   };
+  /** The panel's value once it has held still for a second (it updates 4 times a second, later on a slow machine). */
+  const settled = async () => {
+    let last = await geometries.textContent();
+    for (let tries = 0; tries < 20; tries++) {
+      await page.waitForTimeout(1000);
+      const now = await geometries.textContent();
+      if (now === last) return now;
+      last = now;
+    }
+    return last;
+  };
   // The baseline is a steady state: one stroke drawn and cleared (the intro's leftovers are gone).
   await line(300);
   await clear();
-  await page.waitForTimeout(500);
-  const baseline = await geometries.textContent();
+  const baseline = await settled();
 
   await line(300);
   await page.getByRole('button', { name: 'Ribbon (B)' }).click();
@@ -104,6 +114,7 @@ test('frees GPU geometry when strokes go away', async ({ page }) => {
   await page.getByRole('button', { name: 'Undo (Z)' }).click();
   await page.getByRole('button', { name: 'Redo (Shift Z)' }).click();
   await clear();
-  await expect(geometries).toHaveText(baseline ?? '');
+  // A leak would never come back down to the baseline.
+  await expect.poll(() => geometries.textContent(), { timeout: 20_000 }).toBe(baseline);
   expect(errors).toEqual([]);
 });
