@@ -16,6 +16,7 @@ const MAX = 4000;
 const GRAVITY = 900; // canvas units / s²
 const DRAG = 1.6; // 1/s
 const STREAK = 0.03; // seconds of motion shown per streak
+const DRIFT = 140; // canvas units / s²: a gentle sideways sway, like embers in moving air
 
 const HOT = new Color('#FFE3B0');
 
@@ -26,6 +27,8 @@ export class Sparks {
   private life = new Float32Array(MAX);
   private maxLife = new Float32Array(MAX);
   private rgb = new Float32Array(MAX * 3);
+  private phase = new Float32Array(MAX);
+  private clock = 0;
   private positions: Float32BufferAttribute;
   private colors: Float32BufferAttribute;
   private next = 0;
@@ -64,6 +67,7 @@ export class Sparks {
       this.pos[i * 2 + 1] = from.y + (to.y - from.y) * s;
       this.vel[i * 2] = Math.cos(angle) * speed;
       this.vel[i * 2 + 1] = Math.sin(angle) * speed - 120;
+      this.phase[i] = Math.random() * Math.PI * 2;
       const life = 0.35 + Math.random() * 0.7;
       this.life[i] = life;
       this.maxLife[i] = life;
@@ -80,6 +84,7 @@ export class Sparks {
     const pa = this.positions.array as Float32Array;
     const ca = this.colors.array as Float32Array;
     const drag = Math.exp(-DRAG * dt);
+    this.clock += dt;
     let any = 0;
     for (let i = 0; i < MAX; i++) {
       const o = i * 6;
@@ -89,7 +94,8 @@ export class Sparks {
       }
       any++;
       this.life[i]! -= dt;
-      const vx = (this.vel[i * 2]! *= drag);
+      const sway = Math.sin(this.clock * 7 + this.phase[i]!) * DRIFT * dt;
+      const vx = (this.vel[i * 2] = this.vel[i * 2]! * drag + sway);
       const vy = (this.vel[i * 2 + 1] = this.vel[i * 2 + 1]! * drag + GRAVITY * dt);
       const x = (this.pos[i * 2]! += vx * dt);
       const y = (this.pos[i * 2 + 1]! += vy * dt);
