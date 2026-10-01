@@ -4,17 +4,15 @@
 // fragment shader can shade a hot core and soft edge from |aAcross| alone.
 
 import { BufferGeometry, Color, Float32BufferAttribute } from 'three';
-import { densify, type Stroke, type StrokePoint } from '@afterglow/core';
+import type { Stroke, StrokePoint } from '@afterglow/core';
+import { clampDepth, stripSections } from './outline';
 
-export const SPACING = 2.5;
 const CAP_SEGMENTS = 8;
 const DISC_SEGMENTS = 16;
 
-export const clampDepth = (d: number) => Math.min(2.2, Math.max(0.4, d));
-
 /** `intensity` scales the brightness, so brushes can share a material (the sparks core runs hotter). */
 export function buildStrip(stroke: Stroke, widthScale: number, intensity = 1): BufferGeometry {
-  const pts = densify(stroke.points, SPACING);
+  const sections = stripSections(stroke, widthScale);
   const color = new Color(stroke.color);
   const position: number[] = [];
   const across: number[] = [];
@@ -24,7 +22,6 @@ export function buildStrip(stroke: Stroke, widthScale: number, intensity = 1): B
   const index: number[] = [];
   let count = 0;
 
-  const halfWidth = (p: StrokePoint) => stroke.size * widthScale * clampDepth(p.depth) * 0.5;
   const vertex = (x: number, y: number, a: number, p: StrokePoint): number => {
     position.push(x, y, 0);
     across.push(a);
@@ -33,8 +30,7 @@ export function buildStrip(stroke: Stroke, widthScale: number, intensity = 1): B
     tint.push(color.r, color.g, color.b);
     return count++;
   };
-  const fan = (p: StrokePoint, fromAngle: number, sweep: number, segments: number) => {
-    const h = halfWidth(p);
+  const fan = (p: StrokePoint, h: number, fromAngle: number, sweep: number, segments: number) => {
     const center = vertex(p.x, p.y, 0, p);
     let prev = -1;
     for (let k = 0; k <= segments; k++) {
@@ -45,36 +41,20 @@ export function buildStrip(stroke: Stroke, widthScale: number, intensity = 1): B
     }
   };
 
-  const first = pts[0];
-  if (!first) return new BufferGeometry();
-  if (pts.length === 1) {
-    fan(first, 0, Math.PI * 2, DISC_SEGMENTS);
+  const first = sections[0];
+  const last = sections[sections.length - 1];
+  if (!first || !last) return new BufferGeometry();
+  if (sections.length === 1) {
+    fan(first.point, first.half, 0, Math.PI * 2, DISC_SEGMENTS);
   } else {
-    let nx = 0;
-    let ny = 1;
-    const normals: Array<[number, number]> = [];
-    for (let i = 0; i < pts.length; i++) {
-      const prev = pts[Math.max(0, i - 1)]!;
-      const next = pts[Math.min(pts.length - 1, i + 1)]!;
-      const tx = next.x - prev.x;
-      const ty = next.y - prev.y;
-      const len = Math.hypot(tx, ty);
-      if (len > 1e-6) {
-        nx = -ty / len;
-        ny = tx / len;
-      }
-      normals.push([nx, ny]);
-      const p = pts[i]!;
-      const h = halfWidth(p);
+    sections.forEach(({ point: p, nx, ny, half: h }, i) => {
       const left = vertex(p.x + nx * h, p.y + ny * h, -1, p);
       const right = vertex(p.x - nx * h, p.y - ny * h, 1, p);
       if (i > 0) index.push(left - 2, right - 2, left, right - 2, right, left);
-    }
+    });
     // Rotating the normal by +90° points backwards along the path, -90° forwards.
-    const [n0x, n0y] = normals[0]!;
-    const [n1x, n1y] = normals[normals.length - 1]!;
-    fan(first, Math.atan2(n0y, n0x), Math.PI, CAP_SEGMENTS);
-    fan(pts[pts.length - 1]!, Math.atan2(n1y, n1x), -Math.PI, CAP_SEGMENTS);
+    fan(first.point, first.half, Math.atan2(first.ny, first.nx), Math.PI, CAP_SEGMENTS);
+    fan(last.point, last.half, Math.atan2(last.ny, last.nx), -Math.PI, CAP_SEGMENTS);
   }
 
   const geo = new BufferGeometry();
