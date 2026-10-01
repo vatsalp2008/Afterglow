@@ -52,6 +52,8 @@ export class LightRenderer {
     this.gl.toneMapping = NoToneMapping;
     this.gl.outputColorSpace = SRGBColorSpace;
     this.gl.setClearColor(0x000000, 1);
+    // The composers render several passes per frame; count the whole frame, not the last pass.
+    this.gl.info.autoReset = false;
     this.lightScene.add(this.sparks.object);
 
     this.bloomComposer = new EffectComposer(this.gl);
@@ -147,11 +149,27 @@ export class LightRenderer {
   }
 
   render(now: number, dtSec: number): void {
+    this.gl.info.reset();
     this.fade.uNow.value = now;
     if (this.grainAnimated) this.composite.uniforms['uTime']!.value = now / 1000;
     this.sparks.update(dtSec);
     this.bloomComposer.render(dtSec);
     this.finalComposer.render(dtSec);
+  }
+
+  /**
+   * Blocks until the GPU has finished the last frame, by reading back one pixel. For
+   * benchmarks only: it stalls the pipeline, which is what makes the timing true.
+   */
+  waitForGpu(): void {
+    const gl = this.gl.getContext();
+    gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
+  }
+
+  /** Draw calls and triangles of the last frame, and the geometries held on the GPU. */
+  stats(): { calls: number; triangles: number; geometries: number } {
+    const { render, memory } = this.gl.info;
+    return { calls: render.calls, triangles: render.triangles, geometries: memory.geometries };
   }
 
   /** The GPU as WebGL reports it, e.g. "ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Pro, ...)". */
