@@ -63,3 +63,47 @@ test('erases through a stroke with the mouse, and undoes the erase', async ({ pa
   await expect(strokes).toHaveText('2');
   expect(errors).toEqual([]);
 });
+
+// GPU resources are released: after drawing (including a ribbon), erasing, undoing, and
+// clearing, the geometries held on the GPU are back where they started.
+test('frees GPU geometry when strokes go away', async ({ page }) => {
+  test.setTimeout(60_000);
+  const errors = collectErrors(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Paint with a mouse instead' }).click();
+  await page.keyboard.press('h');
+  const stats = page.getByRole('complementary', { name: 'Stats' });
+  const value = (label: string) => stats.locator('dt', { hasText: label }).locator('xpath=following-sibling::dd');
+  const geometries = value('GPU geometries');
+  const clear = async () => {
+    await page.getByRole('button', { name: 'Clear, press twice (Delete)' }).click();
+    await page.getByRole('button', { name: 'Clear, press twice (Delete)' }).click();
+    await expect(value('Strokes')).toHaveText('0');
+  };
+  const line = async (y: number) => {
+    await page.mouse.move(300, y);
+    await page.mouse.down();
+    for (let i = 1; i <= 8; i++) await page.mouse.move(300 + i * 50, y + (i % 2) * 20);
+    await page.mouse.up();
+  };
+  // The baseline is a steady state: one stroke drawn and cleared (the intro's leftovers are gone).
+  await line(300);
+  await clear();
+  await page.waitForTimeout(500);
+  const baseline = await geometries.textContent();
+
+  await line(300);
+  await page.getByRole('button', { name: 'Ribbon (B)' }).click();
+  await line(400);
+  await expect(value('Strokes')).toHaveText('2');
+  await page.getByRole('button', { name: /^Eraser/ }).click();
+  await page.mouse.move(500, 250);
+  await page.mouse.down();
+  for (let i = 1; i <= 4; i++) await page.mouse.move(500, 250 + i * 50);
+  await page.mouse.up();
+  await page.getByRole('button', { name: 'Undo (Z)' }).click();
+  await page.getByRole('button', { name: 'Redo (Shift Z)' }).click();
+  await clear();
+  await expect(geometries).toHaveText(baseline ?? '');
+  expect(errors).toEqual([]);
+});
