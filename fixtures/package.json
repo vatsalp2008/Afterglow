@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "eval": "node scripts/eval.ts",
-    "tune": "node scripts/eval.ts --tune"
+    "tune": "node scripts/eval.ts --tune",
+    "eval:shapes": "node scripts/eval-shapes.ts"
   },
   "dependencies": {
     "@afterglow/core": "workspace:*"
