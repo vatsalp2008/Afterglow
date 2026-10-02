@@ -9,20 +9,28 @@ import { useStudioStore, type StudioState } from './store';
 
 const Divider = () => <span className={styles.divider} aria-hidden="true" />;
 
-/** True for `ms` after the mouse (or a pen) last moved. */
+/** True for `ms` after the mouse (or a pen) last moved, or a finger last touched the screen. */
 function useRecentPointer(ms: number): boolean {
   const [recent, setRecent] = useState(false);
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const onMove = (e: PointerEvent) => {
-      if (e.pointerType === 'touch') return;
+    const show = () => {
       setRecent(true);
       clearTimeout(timer);
       timer = setTimeout(() => setRecent(false), ms);
     };
+    // A finger only moves while it's down, so for touch the touch itself counts.
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') show();
+    };
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') show();
+    };
     window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerdown', onDown);
     return () => {
       window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerdown', onDown);
       clearTimeout(timer);
     };
   }, [ms]);

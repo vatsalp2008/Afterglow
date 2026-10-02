@@ -4,6 +4,9 @@ import { useShallow } from 'zustand/react/shallow';
 import styles from './Overlay.module.css';
 import { useStudioStore } from './store';
 
+/** A touch screen with no mouse or trackpad: a phone or a tablet. */
+const touchFirst = () => window.matchMedia('(pointer: coarse) and (not (any-pointer: fine))').matches;
+
 export function Hint() {
   const s = useStudioStore(
     useShallow((st) => ({
@@ -42,7 +45,7 @@ export function Hint() {
       s.handCount === 0
         ? 'Raise a hand so the camera can see it'
         : 'Pinch to draw. Hold up an open hand, fingers spread, for the menu.';
-  else if (!s.hasDrawn) text = 'Click and drag to paint. Press H for stats.';
+  else if (!s.hasDrawn) text = touchFirst() ? 'Drag a finger to paint' : 'Click and drag to paint. Press H for stats.';
   if (!text) return null;
   return (
     <p className={styles.hint} role="status">

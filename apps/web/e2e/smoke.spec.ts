@@ -6,7 +6,7 @@ test('paints a stroke with the mouse', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Afterglow' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Paint with a mouse instead' }).click();
+  await page.getByRole('button', { name: 'Paint without the camera' }).click();
   const undo = page.getByRole('button', { name: 'Undo (Z)' });
   await expect(undo).toBeDisabled();
 
@@ -28,7 +28,7 @@ test('explains a camera failure and offers a way forward', async ({ page }) => {
   await page.getByRole('button', { name: 'Start painting' }).click();
   await expect(page.getByRole('alert')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Try again' })).toBeEnabled();
-  await expect(page.getByRole('button', { name: 'Paint with a mouse instead' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Paint without the camera' })).toBeEnabled();
 });
 
 test('erases through a stroke with the mouse, and undoes the erase', async ({ page }) => {
@@ -36,7 +36,7 @@ test('erases through a stroke with the mouse, and undoes the erase', async ({ pa
   test.setTimeout(60_000);
   const errors = collectErrors(page);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Paint with a mouse instead' }).click();
+  await page.getByRole('button', { name: 'Paint without the camera' }).click();
 
   // A horizontal line, then the eraser dragged down through its middle.
   await page.mouse.move(300, 400);
@@ -70,7 +70,7 @@ test('frees GPU geometry when strokes go away', async ({ page }) => {
   test.setTimeout(60_000);
   const errors = collectErrors(page);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Paint with a mouse instead' }).click();
+  await page.getByRole('button', { name: 'Paint without the camera' }).click();
   await page.keyboard.press('h');
   const stats = page.getByRole('complementary', { name: 'Stats' });
   const value = (label: string) => stats.locator('dt', { hasText: label }).locator('xpath=following-sibling::dd');

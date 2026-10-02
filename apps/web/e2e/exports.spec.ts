@@ -39,7 +39,7 @@ test('saves an image, a vector image, and a drawing file that opens again', asyn
   test.setTimeout(90_000);
   const errors = collectErrors(page);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Paint with a mouse instead' }).click();
+  await page.getByRole('button', { name: 'Paint without the camera' }).click();
   await drawLine(page, 300);
   await drawLine(page, 450);
   await page.keyboard.press('h');
@@ -75,7 +75,7 @@ test('explains a file that is not a drawing, and opens one dropped on the page',
   test.setTimeout(60_000);
   const errors = collectErrors(page);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Paint with a mouse instead' }).click();
+  await page.getByRole('button', { name: 'Paint without the camera' }).click();
   await page.keyboard.press('h');
 
   await openFile(page, { name: 'notes.json', mimeType: 'application/json', buffer: Buffer.from('{"notes":[]}') });

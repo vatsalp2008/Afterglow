@@ -16,6 +16,11 @@
   touch-action: none;
 }
 
+/* In the studio, every touch paints or presses a button: no page scrolling or zooming. */
+.studio {
+  touch-action: none;
+}
+
 .studio .gl {
   cursor: none;
 }

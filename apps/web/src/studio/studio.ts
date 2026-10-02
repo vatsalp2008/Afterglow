@@ -61,6 +61,7 @@ import { DemoPen } from './demoPen';
 import { download, downloadJson, stamp } from './download';
 import { carriesFiles, MAX_DRAWING_BYTES, OPEN_PROBLEM_COPY, pickDrawingFile } from './drawingFile';
 import { loadFixture } from './fixtures';
+import { isPointerKey, POINTER_KEY, pointerKey } from './pointerKeys';
 import type { Scenario } from './scenarios';
 import { SessionCapture } from './sessionCapture';
 import { stressCount, stressStrokes } from './stress';
@@ -71,7 +72,6 @@ import { BenchCollector, type BlockSummary } from './trackerBench';
 
 const FADE_TAU_MS = 2600;
 const INTRO_FADE_TAU_MS = 1300;
-const POINTER_KEY = 'pointer';
 const WASM_BASE_PATH = `${import.meta.env.BASE_URL}mediapipe`;
 
 export interface StudioElements {
@@ -158,7 +158,8 @@ export class Studio {
   private bench: BenchCollector | null = null;
   private benchRunning = false;
   private clearArmedUntil = 0;
-  private pointerActive = false;
+  /** Pointers drawing right now, by pointer id, and the pen each drives. */
+  private activePointers = new Map<number, string>();
 
   private pens = new Map<string, PenCursor>();
   private rawPens = new Map<string, PenSample>();
@@ -236,6 +237,10 @@ export class Studio {
     // A drawing file dropped anywhere opens; without this the browser would navigate to it.
     listen(window, 'dragover', this.onDragOver);
     listen(window, 'drop', this.onDrop);
+    // Safari zooms the page on a two-finger pinch despite touch-action; painting needs both fingers.
+    const stopZoom = (e: Event) => e.preventDefault();
+    document.addEventListener('gesturestart', stopZoom);
+    this.disposers.push(() => document.removeEventListener('gesturestart', stopZoom));
     this.disposers.push(useStudioStore.subscribe(this.onSettings));
     this.raf = requestAnimationFrame(this.tick);
   }
@@ -824,7 +829,7 @@ export class Studio {
     this.handleMenu(menuEvents, filtered, aspect);
     if (!wasOpen) this.handleGestures(gestures);
     this.frameCapture = null;
-    for (const key of this.pens.keys()) if (key !== POINTER_KEY && !tracked.has(key)) this.pens.delete(key);
+    for (const key of this.pens.keys()) if (!isPointerKey(key) && !tracked.has(key)) this.pens.delete(key);
   };
 
   /**
@@ -840,7 +845,7 @@ export class Studio {
     this.filter.reset();
     this.lastFiltered = null;
     this.rawPens.clear();
-    for (const key of this.pens.keys()) if (key !== POINTER_KEY) this.pens.delete(key);
+    for (const key of this.pens.keys()) if (!isPointerKey(key)) this.pens.delete(key);
     this.overlayDirty = true;
   }
 
@@ -856,7 +861,7 @@ export class Studio {
         this.pens.set(ev.handKey, { p: ev.p, state: ev.type === 'hover' ? 'hover' : 'drawing', color: style.color });
       }
       if (this.replay || this.mode !== 'studio') continue;
-      if (paused && ev.handKey !== POINTER_KEY) continue;
+      if (paused && !isPointerKey(ev.handKey)) continue;
       // The tool is fixed for a whole stroke: switching mid-stroke takes effect on the next one.
       const erasing =
         ev.type === 'strokeStart' ? useStudioStore.getState().tool === 'erase' : this.erasing.has(ev.handKey);
@@ -970,15 +975,21 @@ export class Studio {
 
   private onPointerDown = (e: PointerEvent): void => {
     if (this.mode !== 'studio' || this.replay || e.button > 0) return;
+    const key = pointerKey(e);
+    // A mouse and a stylus share a pen: the second can't start a stroke while the first draws.
+    if ([...this.activePointers.values()].includes(key)) return;
     this.els.canvas.setPointerCapture(e.pointerId);
-    this.pointerActive = true;
-    this.handleEvents([{ type: 'strokeStart', t: this.eventTime(e), handKey: POINTER_KEY, p: this.pointerSample(e) }]);
+    this.activePointers.set(e.pointerId, key);
+    this.handleEvents([{ type: 'strokeStart', t: this.eventTime(e), handKey: key, p: this.pointerSample(e) }]);
   };
 
   private onPointerMove = (e: PointerEvent): void => {
     if (this.mode !== 'studio') return;
-    if (!this.pointerActive) {
-      this.handleEvents([{ type: 'hover', t: this.eventTime(e), handKey: POINTER_KEY, p: this.pointerSample(e) }]);
+    const key = this.activePointers.get(e.pointerId);
+    if (!key) {
+      if (e.pointerType !== 'touch') {
+        this.handleEvents([{ type: 'hover', t: this.eventTime(e), handKey: POINTER_KEY, p: this.pointerSample(e) }]);
+      }
       return;
     }
     // Older Safari lacks getCoalescedEvents; fall back to the single event.
@@ -988,17 +999,18 @@ export class Studio {
       samples.map((ce) => ({
         type: 'strokeMove',
         t: this.eventTime(ce),
-        handKey: POINTER_KEY,
+        handKey: key,
         p: this.pointerSample(ce),
       })),
     );
   };
 
   private onPointerUp = (e: PointerEvent): void => {
-    if (!this.pointerActive) return;
-    this.pointerActive = false;
-    this.handleEvents([{ type: 'strokeEnd', t: this.eventTime(e), handKey: POINTER_KEY, reason: 'release' }]);
-    if (e.pointerType !== 'mouse') this.pens.delete(POINTER_KEY);
+    const key = this.activePointers.get(e.pointerId);
+    if (!key) return;
+    this.activePointers.delete(e.pointerId);
+    this.handleEvents([{ type: 'strokeEnd', t: this.eventTime(e), handKey: key, reason: 'release' }]);
+    if (e.pointerType !== 'mouse') this.pens.delete(key);
   };
 
   private onDragOver = (e: DragEvent): void => {
@@ -1020,7 +1032,7 @@ export class Studio {
   };
 
   private onPointerLeave = (): void => {
-    if (!this.pointerActive) this.pens.delete(POINTER_KEY);
+    if (![...this.activePointers.values()].includes(POINTER_KEY)) this.pens.delete(POINTER_KEY);
   };
 
   // ---- frame loop ----------------------------------------------------------

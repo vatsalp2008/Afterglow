@@ -10,7 +10,7 @@ const ERROR_COPY: Record<StartError, string> = {
   unsupported: 'This browser can’t use the camera here. Try a current version of Chrome, Edge, or Firefox.',
   model: 'Hand tracking didn’t load. Check your connection and try again.',
   fixture: 'That recorded session couldn’t be loaded. Check the fixture name in the address bar.',
-  unknown: 'The camera couldn’t start. Try again, or paint with a mouse for now.',
+  unknown: 'The camera couldn’t start. Try again, or paint without the camera for now.',
 };
 
 export function Intro({ studio }: { studio: Studio }) {
@@ -46,7 +46,7 @@ export function Intro({ studio }: { studio: Studio }) {
             {error ? 'Try again' : 'Start painting'}
           </Button>
           <Button variant="secondary" onClick={() => studio.startPointer()} disabled={starting}>
-            Paint with a mouse instead
+            Paint without the camera
           </Button>
         </div>
 
