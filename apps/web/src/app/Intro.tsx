@@ -1,7 +1,7 @@
 import { Button } from '@afterglow/ui';
 import type { Studio } from '../studio/studio';
 import styles from './Intro.module.css';
-import { ERROR_COPY } from './errorCopy';
+import { CAMERA_IMPOSSIBLE, ERROR_COPY } from './errorCopy';
 import { useStudioStore } from './store';
 
 export function Intro({ studio }: { studio: Studio }) {
@@ -33,9 +33,11 @@ export function Intro({ studio }: { studio: Studio }) {
         )}
 
         <div className={styles.actions}>
-          <Button onClick={() => void studio.startCamera()} disabled={starting}>
-            {error ? 'Try again' : 'Start painting'}
-          </Button>
+          {!(error && CAMERA_IMPOSSIBLE.has(error)) && (
+            <Button onClick={() => void studio.startCamera()} disabled={starting}>
+              {error ? 'Try again' : 'Start painting'}
+            </Button>
+          )}
           <Button variant="secondary" onClick={() => studio.startPointer()} disabled={starting}>
             Paint without the camera
           </Button>

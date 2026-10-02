@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cameraConstraints, classifyCameraError } from './camera';
+import { cameraConstraints, cameraUnavailable, classifyCameraError } from './camera';
 
 describe('classifyCameraError', () => {
   it.each([
@@ -16,6 +16,14 @@ describe('classifyCameraError', () => {
 
   it('treats non-DOM errors as unknown', () => {
     expect(classifyCameraError(new Error('boom')).kind).toBe('unknown');
+  });
+});
+
+describe('cameraUnavailable', () => {
+  it('explains an insecure page before a missing API', () => {
+    expect(cameraUnavailable({ isSecureContext: false, hasMediaDevices: false })).toBe('insecure');
+    expect(cameraUnavailable({ isSecureContext: true, hasMediaDevices: false })).toBe('unsupported');
+    expect(cameraUnavailable({ isSecureContext: true, hasMediaDevices: true })).toBeNull();
   });
 });
 

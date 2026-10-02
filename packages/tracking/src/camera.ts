@@ -1,4 +1,4 @@
-export type CameraErrorKind = 'denied' | 'notFound' | 'inUse' | 'unsupported' | 'unknown';
+export type CameraErrorKind = 'denied' | 'notFound' | 'inUse' | 'insecure' | 'unsupported' | 'unknown';
 
 export class CameraError extends Error {
   constructor(
@@ -8,6 +8,19 @@ export class CameraError extends Error {
     super(message);
     this.name = 'CameraError';
   }
+}
+
+/**
+ * Why this page can't ask for the camera at all, if it can't. Browsers only expose the
+ * camera to secure pages (https, or localhost).
+ */
+export function cameraUnavailable(page: {
+  isSecureContext: boolean;
+  hasMediaDevices: boolean;
+}): CameraErrorKind | null {
+  if (!page.isSecureContext) return 'insecure';
+  if (!page.hasMediaDevices) return 'unsupported';
+  return null;
 }
 
 /** Maps a getUserMedia failure to a kind the UI can explain. */
@@ -50,10 +63,8 @@ export function cameraConstraints(opts: CameraOptions = {}): MediaStreamConstrai
 
 /** Opens a camera and starts playback into `video`. */
 export async function openCamera(video: HTMLVideoElement, opts: CameraOptions = {}): Promise<MediaStream> {
-  // mediaDevices is only exposed in secure contexts (https or localhost).
-  if (!('mediaDevices' in navigator)) {
-    throw new CameraError('unsupported', 'getUserMedia is not available');
-  }
+  const unavailable = cameraUnavailable({ isSecureContext, hasMediaDevices: 'mediaDevices' in navigator });
+  if (unavailable) throw new CameraError(unavailable, 'getUserMedia is not available');
   let stream: MediaStream;
   try {
     stream = await navigator.mediaDevices.getUserMedia(cameraConstraints(opts));

@@ -123,6 +123,22 @@ function countGesture(name: ToolGesture): void {
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
+/**
+ * Why the camera didn't open. Browsers report a closed prompt and a blocked camera
+ * alike; the permission's state tells them apart (still "prompt" when it was closed).
+ */
+async function startError(err: unknown): Promise<StartError> {
+  if (!(err instanceof CameraError)) return 'unknown';
+  if (err.kind !== 'denied') return err.kind;
+  try {
+    const status = await navigator.permissions.query({ name: 'camera' });
+    return status.state === 'prompt' ? 'dismissed' : 'denied';
+  } catch {
+    // Firefox doesn't know the "camera" permission name.
+    return 'denied';
+  }
+}
+
 /** `?tracker=main|worker` overrides where inference runs (see ADR 0003). */
 function trackerPreference(): 'worker' | 'main' {
   return new URLSearchParams(location.search).get('tracker') === 'main' ? 'main' : 'worker';
@@ -260,12 +276,12 @@ export class Studio {
 
   async startCamera(): Promise<void> {
     const set = useStudioStore.setState;
-    set({ phase: 'starting', error: null, loadingMessage: 'Waiting for camera permission' });
+    set({ phase: 'starting', error: null, loadingMessage: 'Your browser will ask to use the camera. Choose Allow.' });
     try {
       this.stream ??= await openCamera(this.els.video, this.cameraOptions());
       this.watchCamera();
     } catch (err) {
-      set({ phase: 'intro', loadingMessage: null, error: err instanceof CameraError ? err.kind : 'unknown' });
+      set({ phase: 'intro', loadingMessage: null, error: await startError(err) });
       return;
     }
     set({ loadingMessage: 'Loading hand tracking (about 8 MB)' });

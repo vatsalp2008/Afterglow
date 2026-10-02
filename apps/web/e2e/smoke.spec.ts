@@ -26,9 +26,24 @@ test('explains a camera failure and offers a way forward', async ({ page }) => {
   await page.goto('/');
   // No camera permission is granted in this context, so the request fails.
   await page.getByRole('button', { name: 'Start painting' }).click();
-  await expect(page.getByRole('alert')).toBeVisible();
+  // Headless Chrome blocks the camera without asking.
+  await expect(page.getByRole('alert')).toHaveText(/Camera access is blocked for this site/);
   await expect(page.getByRole('button', { name: 'Try again' })).toBeEnabled();
   await expect(page.getByRole('button', { name: 'Paint without the camera' })).toBeEnabled();
+});
+
+test('tells a closed camera prompt from a blocked camera', async ({ page }) => {
+  // Closing the prompt fails the same way as a block; only the permission's state differs.
+  await page.addInitScript(() => {
+    const query = navigator.permissions.query.bind(navigator.permissions);
+    navigator.permissions.query = (desc) =>
+      desc.name === 'camera' ? Promise.resolve({ state: 'prompt' } as PermissionStatus) : query(desc);
+    navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException('Dismissed', 'NotAllowedError'));
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Start painting' }).click();
+  await expect(page.getByRole('alert')).toHaveText(/camera prompt was closed/);
+  await expect(page.getByRole('button', { name: 'Try again' })).toBeEnabled();
 });
 
 test('erases through a stroke with the mouse, and undoes the erase', async ({ page }) => {

@@ -22,7 +22,8 @@ import type { SizeId } from './brushes';
 
 export type Phase = 'intro' | 'starting' | 'studio';
 export type InputMode = 'camera' | 'pointer' | 'fixture';
-export type StartError = CameraErrorKind | 'model' | 'fixture';
+/** Why the studio couldn't start. `dismissed`: the camera prompt was closed without an answer. */
+export type StartError = CameraErrorKind | 'dismissed' | 'model' | 'fixture';
 
 /** The camera or hand tracking stopped mid-session (ADR 0013). */
 export interface Interruption {
