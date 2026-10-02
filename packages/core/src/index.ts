@@ -30,3 +30,4 @@ export * from './stroke/snap/fits.ts';
 export * from './stroke/snap/snap.ts';
 export * from './eval/labeled.ts';
 export * from './eval/shapes.ts';
+export * from './doodle/raster.ts';
