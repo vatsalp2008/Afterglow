@@ -121,28 +121,34 @@ export function parseDrawing(text: string): ParsedDrawing {
   if (typeof version !== 'number' || !Number.isInteger(version) || version < 1)
     return { ok: false, problem: 'damaged' };
   if (version > DRAWING_VERSION) return { ok: false, problem: 'newerVersion' };
+  const parts = readDrawingParts(data['frame'], data['strokes']);
+  if (!parts.ok) return parts;
+  return {
+    ok: true,
+    drawing: { format: DRAWING_FORMAT, version: DRAWING_VERSION, frame: parts.frame, strokes: parts.strokes },
+  };
+}
+
+/**
+ * Reads a frame and its strokes as a drawing file holds them, with the same checks and
+ * limits, for other files that carry strokes (labeled sets, eval/labeled.ts).
+ */
+export function readDrawingParts(
+  frameValue: unknown,
+  strokesValue: unknown,
+): { ok: true; frame: FrameSize; strokes: Stroke[] } | { ok: false; problem: 'tooLarge' | 'damaged' } {
   try {
-    const frame = data['frame'];
-    const strokes = data['strokes'];
-    if (!isObject(frame) || !Array.isArray(strokes)) throw new Damaged();
-    const width = finite(frame['width'], DRAWING_LIMITS.extent);
-    const height = finite(frame['height'], DRAWING_LIMITS.extent);
+    if (!isObject(frameValue) || !Array.isArray(strokesValue)) throw new Damaged();
+    const width = finite(frameValue['width'], DRAWING_LIMITS.extent);
+    const height = finite(frameValue['height'], DRAWING_LIMITS.extent);
     if (width <= 0 || height <= 0) throw new Damaged();
-    if (strokes.length > DRAWING_LIMITS.strokes) throw new TooLarge();
+    if (strokesValue.length > DRAWING_LIMITS.strokes) throw new TooLarge();
     let points = 0;
-    for (const s of strokes) {
+    for (const s of strokesValue) {
       if (isObject(s) && Array.isArray(s['points'])) points += s['points'].length;
     }
     if (points > DRAWING_LIMITS.points) throw new TooLarge();
-    return {
-      ok: true,
-      drawing: {
-        format: DRAWING_FORMAT,
-        version: DRAWING_VERSION,
-        frame: { width, height },
-        strokes: strokes.map(readStroke),
-      },
-    };
+    return { ok: true, frame: { width, height }, strokes: strokesValue.map(readStroke) };
   } catch (err) {
     if (err instanceof TooLarge) return { ok: false, problem: 'tooLarge' };
     if (err instanceof Damaged) return { ok: false, problem: 'damaged' };

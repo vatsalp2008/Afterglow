@@ -17,6 +17,7 @@ import {
   parseDrawing,
   placeDrawing,
   toDrawing,
+  toLabeledSet,
   landmarkToView,
   penSample,
   PinchTracker,
@@ -33,6 +34,8 @@ import {
   type FrameSize,
   type HandFrame,
   type InputEvent,
+  type LabeledItem,
+  type LabeledKind,
   type MenuEvent,
   type PenSample,
   type PenState,
@@ -236,6 +239,7 @@ export class Studio {
       replaying: false,
       recordingVideo: false,
       session: null,
+      capturing: null,
       bench: null,
     });
     this.renderer = new LightRenderer(els.canvas);
@@ -726,6 +730,26 @@ export class Studio {
   cancelSession(): void {
     this.session.cancel();
     useStudioStore.setState({ session: null });
+  }
+
+  // ---- labeled sets (?record=shapes, ?record=doodles) --------------------------
+
+  /** Starts a prompt on a clean canvas. */
+  beginPrompt(): void {
+    this.builder.finishAll();
+    this.history.clear();
+  }
+
+  /** Ends a prompt, with its strokes as drawn; one still being drawn ends here. */
+  endPrompt(): Stroke[] {
+    for (const s of this.builder.finishAll()) this.history.add(s);
+    return [...this.history.strokes];
+  }
+
+  saveLabeledSet(kind: LabeledKind, person: string, items: readonly LabeledItem[]): void {
+    const set = toLabeledSet(kind, person, new Date().toISOString(), this.frame, items);
+    downloadJson(set, `afterglow-${kind}-${person}-${stamp()}.json`);
+    showToast(`Saved ${String(items.length)} labeled ${kind}`);
   }
 
   // ---- tracker benchmark (ADR 0003) ----------------------------------------

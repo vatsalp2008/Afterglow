@@ -6,6 +6,7 @@ import { FixtureCapture } from './FixtureCapture';
 import { Hud } from './Hud';
 import { InterruptionCard } from './InterruptionCard';
 import { Intro, Unsupported } from './Intro';
+import { LabeledCapture } from './LabeledCapture';
 import { Help } from './Help';
 import { Hint, Toast } from './Overlay';
 import { RadialMenu } from './RadialMenu';
@@ -14,7 +15,7 @@ import { useStudioStore } from './store';
 import { RenderBench } from './RenderBench';
 import { TrackerBench } from './TrackerBench';
 
-// Developer tools: ?fixture=<name>[&loop], ?record=fixtures, ?bench=tracker
+// Developer tools: ?fixture=<name>[&loop], ?record=fixtures|guest|shapes|doodles, ?bench=tracker|render
 const params = new URLSearchParams(location.search);
 const fixture = params.get('fixture');
 
@@ -84,6 +85,8 @@ export function App() {
           <InterruptionCard studio={studio} />
           {params.get('record') === 'fixtures' && <FixtureCapture studio={studio} />}
           {params.get('record') === 'guest' && <FixtureCapture studio={studio} guest />}
+          {params.get('record') === 'shapes' && <LabeledCapture studio={studio} kind="shapes" />}
+          {params.get('record') === 'doodles' && <LabeledCapture studio={studio} kind="doodles" />}
           {params.get('bench') === 'tracker' && <TrackerBench studio={studio} />}
           {params.get('bench') === 'render' && <RenderBench studio={studio} />}
         </>

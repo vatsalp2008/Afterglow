@@ -28,3 +28,4 @@ export * from './stroke/snap/path.ts';
 export * from './stroke/snap/dollar.ts';
 export * from './stroke/snap/fits.ts';
 export * from './stroke/snap/snap.ts';
+export * from './eval/labeled.ts';

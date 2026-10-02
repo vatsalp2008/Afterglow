@@ -7,6 +7,7 @@ import {
   DEFAULT_PINCH,
   type BrushId,
   type FilterSpec,
+  type LabeledKind,
   type MenuTarget,
   type PenState,
   type PinchConfig,
@@ -130,6 +131,8 @@ export interface StudioState {
   recordingVideo: boolean;
   /** A hand session (fixture) is being recorded. */
   session: { scenario: string | null } | null;
+  /** A labeled set is being recorded (?record=shapes, ?record=doodles): prompts replace the hints. */
+  capturing: LabeledKind | null;
   bench: BenchState | null;
   renderBench: { status: 'running' | 'done' | 'error'; progress: string; result: RenderBenchResult | null } | null;
   toast: { id: number; text: string } | null;
@@ -196,6 +199,7 @@ export const useStudioStore = create<StudioState>()(() => ({
   replaying: false,
   recordingVideo: false,
   session: null,
+  capturing: null,
   bench: null,
   renderBench: null,
   toast: null,

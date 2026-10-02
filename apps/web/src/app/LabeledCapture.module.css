@@ -1,0 +1,26 @@
+/* The prompt, large and high on the screen, readable from where the hand draws. */
+.banner {
+  position: fixed;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(720px, calc(100vw - 32px));
+  text-align: center;
+  pointer-events: none;
+  z-index: 9;
+}
+
+.prompt {
+  margin: 4px 0;
+  font-family: var(--font-display);
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 500;
+  color: var(--paper);
+  text-shadow: 0 2px 18px rgba(7, 10, 24, 0.9);
+}
+
+.progress {
+  margin: 0;
+  color: var(--fog);
+  font-size: 14px;
+}

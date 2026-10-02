@@ -34,6 +34,7 @@ export function Hint() {
       tool: st.tool,
       menuOpen: st.menu !== null,
       interrupted: st.interruption !== null,
+      capturing: st.capturing !== null,
     })),
   );
   // After the first stroke, the hand-raising hint comes back only once the hand has been gone a while.
@@ -42,7 +43,7 @@ export function Hint() {
   const hands = s.inputMode !== 'pointer';
   let text: string | null = null;
   const recording = s.recordingVideo || s.session !== null;
-  if (s.menuOpen || s.interrupted) text = null;
+  if (s.menuOpen || s.interrupted || s.capturing) text = null;
   else if (s.session)
     text = s.session.scenario ? `Recording ${s.session.scenario}` : 'Recording session. Press R to stop.';
   else if (s.replaying)
