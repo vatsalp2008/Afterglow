@@ -11,56 +11,73 @@ pnpm install
 pnpm dev
 ```
 
-Open the URL Vite prints in Chrome or Edge. The first camera start downloads the hand tracking model (about 8 MB).
+Open the URL Vite prints in Chrome or Edge. The first camera start downloads the hand tracking model (about 8 MB). Once the camera is allowed, later visits start it without a click.
 
 ## What to try
 
-1. **Start painting** and allow the camera. Hold a hand up, then pinch your thumb and index finger together to draw. Open them to lift the pen. Both hands can draw at once.
+1. **Start painting** and allow the camera. Hold a hand up, then pinch your thumb and index finger together to draw, and open them to lift the pen. Both hands can draw at once.
 2. Move your hand closer to the camera while drawing: the line gets thicker and brighter.
-3. Press **F** to switch between strokes that fade like a long exposure and strokes that stay.
-4. Try the **sparks** brush (press **B**) for steel-wool-style particles.
-5. Press **T** to replay the session as a timelapse, **V** to record that timelapse as a video, **S** to save a long-exposure PNG.
-6. Press **H** for live stats: tracking and render FPS, latency, the pinch ratio against its thresholds, and One Euro filter sliders. Turn on "Show raw signal" to see the unfiltered pen position next to the filtered one.
+3. Hold up an open hand, fingers spread, to open the **gesture menu** around it. Point your palm at an item and pinch to choose it: brushes, colors, sizes, the eraser, undo and redo, clear, and More (fade, darkroom, replay, save, help).
+4. Make a **fist** to pause drawing. Swipe **two fingers** left or right to undo or redo.
+5. Try the **ribbon** brush: a broad pen nib that twists as you turn your hand. **Sparks** throws off steel-wool particles.
+6. Save from More, then Save, in the menu, or from the dock: a long-exposure **image**, a **vector image** (SVG), a **drawing file** you can open again later (drop it on the page), or a **timelapse video**.
+7. Press **H** for live stats: tracking and render FPS, latency, the pinch ratio against its thresholds, and the filter's settings.
 
-No camera? **Paint with a mouse instead** uses the same pipeline, with pen pressure mapped to thickness.
-
-Add `?stress=1` to the URL to load 500 synthetic strokes for render performance testing.
+No camera? **Paint without the camera** uses the same pipeline with a mouse, a pen (pressure sets the thickness), or your fingers on a touch screen, one stroke per finger.
 
 ## Shortcuts
 
-| Key            | Action                           |
-| -------------- | -------------------------------- |
-| 1 to 5         | Color                            |
-| B              | Next brush (neon, sparks, ink)   |
-| [ and ]        | Thinner, thicker                 |
-| F              | Fade or fix strokes              |
-| D              | Darkroom on or off (camera only) |
-| Z, Shift Z     | Undo, redo                       |
-| Delete (twice) | Clear                            |
-| T              | Replay as timelapse              |
-| V              | Record timelapse video           |
-| S              | Save long exposure PNG           |
-| H              | Stats                            |
-| Esc            | Stop replay                      |
+Press **?** in the studio for this list.
+
+| Key                       | Action                                 |
+| ------------------------- | -------------------------------------- |
+| B                         | Next brush (neon, sparks, ribbon, ink) |
+| E                         | Eraser, or back to drawing             |
+| 1 to 5                    | Color                                  |
+| [ and ]                   | Thinner, thicker                       |
+| Z, Shift Z                | Undo, redo                             |
+| Delete (twice)            | Clear                                  |
+| F                         | Let strokes fade, or keep them         |
+| D                         | Darkroom on or off (camera only)       |
+| P                         | Pause hand drawing (camera only)       |
+| T                         | Replay as a timelapse                  |
+| V                         | Record a timelapse video               |
+| Esc                       | Stop a replay or recording, close help |
+| S                         | Save image                             |
+| Shift S                   | Save vector image (SVG)                |
+| Cmd S (Ctrl S on Windows) | Save drawing file                      |
+| Cmd O (Ctrl O on Windows) | Open a drawing file                    |
+| H                         | Stats                                  |
+| ?                         | Help                                   |
+
+## Developer URLs
+
+- `?fixture=<name>[&loop]` replays a recorded session from `fixtures/sessions` instead of the camera.
+- `?record=fixtures` guides recording the fixture scenarios; R records ad hoc.
+- `?bench=tracker` and `?bench=render` run the benchmarks in [docs/benchmarks.md](../../docs/benchmarks.md).
+- `?stress=N` loads N synthetic strokes (500 for `?stress=1`).
+- `?tracker=main` runs hand tracking on the main thread instead of a worker.
 
 ## How it works
 
 ```
-camera ─ requestVideoFrameCallback ─▶ MediaPipe HandLandmarker (GPU, main thread)
-      ─▶ One Euro filter per landmark ─▶ pinch state machine (hysteresis, hand-loss grace)
-      ─▶ stroke builder (Catmull-Rom smoothing) ─▶ history (undo/redo)
-      ─▶ Three.js: neon ribbons + sparks ─▶ bloom ─▶ composite over darkroom video
+camera ─ requestVideoFrameCallback ─▶ MediaPipe HandLandmarker (GPU, in a worker)
+      ─▶ hand identity ─▶ One Euro filter per landmark
+      ─▶ pinch, tool gesture, and menu state machines
+      ─▶ stroke builder (Catmull-Rom) ─▶ history (undo/redo)
+      ─▶ Three.js: light strokes ─▶ bloom ─▶ composite over darkroom video
 ```
 
-- [`packages/core`](../../packages/core) is pure TypeScript with no DOM access and no clock reads. It holds coordinate spaces, filters, the gesture state machine, stroke building, history, and the timelapse timeline.
-- [`packages/tracking`](../../packages/tracking) wraps the camera and MediaPipe. The MediaPipe adapter is lazy-loaded, so mouse-only visitors never download it.
-- [`packages/render`](../../packages/render) renders the light strokes. Bloom applies only to the light layer, so the video and the matte ink brush never glow.
+- [`packages/core`](../../packages/core) is pure TypeScript with no DOM access and no clock reads: coordinate spaces, filters, the gesture state machines, stroke building, history, the timeline, and drawing files.
+- [`packages/tracking`](../../packages/tracking) wraps the camera and MediaPipe. The MediaPipe adapter is lazy-loaded, so visitors without a camera never download it.
+- [`packages/render`](../../packages/render) renders the light strokes and builds the SVG. Bloom applies only to the light layer, so the video and the matte ink brush never glow.
 - [`src/studio`](src/studio) runs the real-time loop outside React. React only renders the controls, built from [`packages/ui`](../../packages/ui).
+
+See [docs/architecture.md](../../docs/architecture.md) for the full picture.
 
 ## Known limits
 
-- Hand tracking runs on the main thread. Moving it to a worker is a Phase 1 decision.
-- Latency is measured from camera capture to render submit, not to the display. In browsers that don't expose the frame's capture time, it falls back to the frame callback time, and the stats panel labels it that way.
-- Depth comes from apparent palm size and isn't calibrated per user yet.
-- Sessions aren't saved; refreshing the page clears the canvas.
-- Faded strokes are still kept and drawn, so very long sessions in fade mode keep adding GPU work.
+- The drawing lives in the page until you save it: refreshing clears the canvas unless you saved a drawing file.
+- The SVG approximates the glow, and has been checked in Chrome only (ADR 0012).
+- Saving by gesture starts a download without a click, which some browsers ask to allow first; Safari hasn't been checked.
+- In browsers that don't expose a frame's capture time, latency falls back to the frame callback time, and the stats panel says so.

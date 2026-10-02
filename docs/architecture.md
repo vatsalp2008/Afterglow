@@ -4,17 +4,17 @@ Afterglow turns webcam hand tracking into glowing light strokes in real time, en
 
 ## Packages
 
-| Package             | Responsibility                                                                                                                                                                   | Depends on                 |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| `packages/core`     | Pure logic: coordinate spaces, hand identity, filters, the pinch and tool gesture state machines, stroke building, undo/redo history, the timelapse timeline, fixture evaluation | nothing                    |
-| `packages/tracking` | Camera access and the MediaPipe Tasks `HandLandmarker` adapter                                                                                                                   | core                       |
-| `packages/render`   | Three.js light renderer: ribbons, sparks, bloom, darkroom composite                                                                                                              | core                       |
-| `packages/ui`       | Design tokens, icons, and base React primitives                                                                                                                                  | nothing                    |
-| `packages/collab`   | Yjs document schema and binding (Phase 6)                                                                                                                                        | core                       |
-| `apps/web`          | The studio: wires the pipeline together and renders the controls                                                                                                                 | core, tracking, render, ui |
-| `apps/api`          | Edge API; `/refine` arrives in Phase 5                                                                                                                                           | nothing                    |
-| `apps/realtime`     | Rooms server; the Yjs websocket arrives in Phase 6                                                                                                                               | nothing                    |
-| `ml/`               | Python training pipeline for the doodle classifier (a separate uv project)                                                                                                       | nothing                    |
+| Package             | Responsibility                                                                                                                                                                                  | Depends on                 |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `packages/core`     | Pure logic: coordinate spaces, hand identity, filters, the pinch and tool gesture state machines, stroke building, undo/redo history, the timelapse timeline, drawing files, fixture evaluation | nothing                    |
+| `packages/tracking` | Camera access and the MediaPipe Tasks `HandLandmarker` adapter                                                                                                                                  | core                       |
+| `packages/render`   | Three.js light renderer: ribbons, sparks, bloom, darkroom composite; stroke outlines and SVG export                                                                                             | core                       |
+| `packages/ui`       | Design tokens, icons, and base React primitives                                                                                                                                                 | nothing                    |
+| `packages/collab`   | Yjs document schema and binding (Phase 6)                                                                                                                                                       | core                       |
+| `apps/web`          | The studio: wires the pipeline together and renders the controls                                                                                                                                | core, tracking, render, ui |
+| `apps/api`          | Edge API; `/refine` arrives in Phase 5                                                                                                                                                          | nothing                    |
+| `apps/realtime`     | Rooms server; the Yjs websocket arrives in Phase 6                                                                                                                                              | nothing                    |
+| `ml/`               | Python training pipeline for the doodle classifier (a separate uv project)                                                                                                                      | nothing                    |
 
 ```mermaid
 flowchart TD
@@ -79,20 +79,34 @@ Every `HandFrame` carries the camera capture time from `requestVideoFrameCallbac
 
 ## Depth
 
-MediaPipe's landmark `z` is depth relative to the wrist, not distance from the camera. Apparent palm size (wrist to middle-finger knuckle) is used instead as the "closer is thicker and brighter" signal.
+MediaPipe's landmark `z` is depth relative to the wrist, not distance from the camera. Apparent hand size is used instead as the "closer is thicker and brighter" signal, relative to the hand's usual size, so it needs no calibration ([ADR 0011](adr/0011-relative-depth-and-nib.md)).
 
 ## Rendering layers
 
-1. **Light layer** (offscreen): neon and sparks strokes with additive blending, then `UnrealBloomPass`.
+1. **Light layer** (offscreen): neon, sparks, and ribbon strokes with additive blending, then `UnrealBloomPass`.
 2. **Composite** (screen): the darkroom-treated video (or the night background), plus the bloomed light layer, with highlight compression.
 3. **Ink layer:** matte strokes drawn after bloom, so they never glow.
 4. **DOM:** pen cursors, the skeleton overlay, and the controls.
 
 Bloom only ever sees light, so bright objects in the room never glow.
 
+## Saving and opening
+
+- **The PNG** is the renderer's own frame, rendered with fade off and the video hidden: a long exposure, light only.
+- **The SVG** (`packages/render/src/svg.ts`) is built from the same stroke outlines as the GPU geometry (`outline.ts`), with blurs and `screen` blending standing in for bloom and additive light.
+- **The timelapse video** records the canvas stream while the timeline replays.
+- **Drawing files** (`packages/core/src/drawing.ts`) hold the strokes with their timing. Opening one checks every field, fits it to the current frame, and swaps it in as one undoable step ([ADR 0012](adr/0012-exports-and-drawing-files.md)).
+
 ## Testing
 
 - **Unit tests (Vitest)** in every package. `packages/core` is deterministic by construction, so filters, gestures, and timelines are tested with synthetic input.
-- **End-to-end tests (Playwright)** against the production build. They cover mouse painting and the camera-failure state. Phase 4 adds fixture-driven hand input.
+- **End-to-end tests (Playwright)** against the production build:
+  - mouse, touch, and keyboard use;
+  - erasing;
+  - GPU memory;
+  - every export, and opening drawing files;
+  - recorded hand sessions (strokes, gestures, the gesture menu);
+  - the real MediaPipe model on Chrome's fake camera, including the camera stopping and the tracking watchdog;
+  - the camera permission messages.
 - **Python (`ml/`):** ruff, strict mypy, and pytest.
 - **CI** runs all of it on every push and pull request.
