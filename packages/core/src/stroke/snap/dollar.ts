@@ -129,18 +129,27 @@ function ellipsePath(rx: number, ry: number, startAngle: number, reverse: boolea
   });
 }
 
-/** An arrow drawn as one stroke: the shaft, then the barbs (out and back, or across). */
+/**
+ * An arrow drawn as one stroke: the shaft, then the barbs (out and back, or across),
+ * with barbs from short to long against the shaft.
+ */
 function arrowPaths(): Vec2[][] {
-  const tail = { x: 0, y: 0 };
-  const tip = { x: 100, y: 0 };
-  const left = { x: 72, y: -22 };
-  const right = { x: 72, y: 22 };
-  return [
-    [tail, tip, left, tip, right],
-    [tail, tip, right, tip, left],
-    [tail, tip, left, right, tip],
-    [tail, tip, right, left, tip],
-  ];
+  const paths: Vec2[][] = [];
+  for (const barb of [0.12, 0.25, 0.4]) {
+    const tail = { x: 0, y: 0 };
+    const tip = { x: 100, y: 0 };
+    const back = 100 * barb * Math.cos(Math.PI / 6);
+    const side = 100 * barb * Math.sin(Math.PI / 6);
+    const left = { x: 100 - back, y: -side };
+    const right = { x: 100 - back, y: side };
+    paths.push(
+      [tail, tip, left, tip, right],
+      [tail, tip, right, tip, left],
+      [tail, tip, left, right, tip],
+      [tail, tip, right, left, tip],
+    );
+  }
+  return paths;
 }
 
 function template(name: string, path: readonly Vec2[]): DollarTemplate {
