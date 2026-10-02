@@ -4,10 +4,29 @@ version = "0.0.0"
 description = "Doodle recognition for Afterglow: Quick, Draw! data prep, training, evaluation, and ONNX export."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
-dependencies = []
+dependencies = [
+    "numpy==2.5.3",
+    "onnx==1.23.1",
+    "onnxruntime==1.30.0",
+    "onnxscript==0.7.2",
+    "torch==2.14.1",
+]
+
+[project.scripts]
+afterglow-ml = "afterglow_ml.cli:main"
 
 [dependency-groups]
 dev = ["mypy==2.3.1", "pytest==9.1.1", "ruff==0.16.9"]
+
+# Linux (CI) installs PyTorch's CPU-only build, skipping gigabytes of CUDA libraries;
+# macOS gets the standard wheel, which trains on the Apple GPU (MPS).
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [build-system]
 requires = ["uv_build>=0.12.19,<0.13"]

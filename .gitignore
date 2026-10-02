@@ -14,6 +14,10 @@ prototype/public/mediapipe
 
 # Python
 .venv
+# The Quick, Draw! download and its rasterized cache, rebuilt by afterglow-ml
+ml/data
+# Training checkpoints
+ml/runs
 __pycache__
 .mypy_cache
 .pytest_cache

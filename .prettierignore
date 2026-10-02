@@ -9,3 +9,8 @@ docs/benchmarks/data
 fixtures/sessions/*.json
 docs/gesture-fsm.md
 fixtures/golden
+# Written by the training pipeline (uv run afterglow-ml parity)
+fixtures/doodle-raster-parity.json
+# Labeled air-drawn sets, written by the studio
+fixtures/shapes
+fixtures/doodles
