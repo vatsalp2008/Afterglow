@@ -40,6 +40,15 @@ describe('drawing files', () => {
     expect(parsed.drawing.frame).toEqual({ width: 1333.33, height: 1000 });
   });
 
+  it('keep a title, if the drawing was named', () => {
+    const named = toDrawing([], frame, '  cat  ');
+    expect(named.title).toBe('cat');
+    expect(toDrawing([], frame, '   ').title).toBeUndefined();
+    const parsed = parseDrawing(saved(named));
+    expect(parsed.ok && parsed.drawing.title).toBe('cat');
+    expect(parseDrawing(saved({ ...named, title: 7 }))).toEqual({ ok: false, problem: 'damaged' });
+  });
+
   it('keep the shape a stroke was snapped to', () => {
     const snapped = toDrawing(
       [

@@ -24,7 +24,12 @@ export interface Drawing {
   /** The canvas the strokes were drawn on. */
   frame: FrameSize;
   strokes: Stroke[];
+  /** What the drawing is, if it was named (an accepted doodle guess, or Refine's title). */
+  title?: string;
 }
+
+/** The longest title a drawing file keeps. */
+export const MAX_TITLE = 80;
 
 export type DrawingProblem = 'notDrawing' | 'newerVersion' | 'tooLarge' | 'damaged';
 
@@ -36,8 +41,8 @@ const round = (n: number, digits: number) => {
 };
 
 /** The drawing to save. Values are rounded well below what anyone can see, to keep files small. */
-export function toDrawing(strokes: readonly Stroke[], frame: FrameSize): Drawing {
-  return {
+export function toDrawing(strokes: readonly Stroke[], frame: FrameSize, title?: string): Drawing {
+  const drawing: Drawing = {
     format: DRAWING_FORMAT,
     version: DRAWING_VERSION,
     frame: { width: round(frame.width, 2), height: round(frame.height, 2) },
@@ -58,6 +63,9 @@ export function toDrawing(strokes: readonly Stroke[], frame: FrameSize): Drawing
       return stroke;
     }),
   };
+  const named = title?.trim().slice(0, MAX_TITLE);
+  if (named) drawing.title = named;
+  return drawing;
 }
 
 class Damaged extends Error {}
@@ -123,10 +131,18 @@ export function parseDrawing(text: string): ParsedDrawing {
   if (version > DRAWING_VERSION) return { ok: false, problem: 'newerVersion' };
   const parts = readDrawingParts(data['frame'], data['strokes']);
   if (!parts.ok) return parts;
-  return {
-    ok: true,
-    drawing: { format: DRAWING_FORMAT, version: DRAWING_VERSION, frame: parts.frame, strokes: parts.strokes },
+  const drawing: Drawing = {
+    format: DRAWING_FORMAT,
+    version: DRAWING_VERSION,
+    frame: parts.frame,
+    strokes: parts.strokes,
   };
+  const title = data['title'];
+  if (title !== undefined) {
+    if (typeof title !== 'string' || title.length > MAX_TITLE) return { ok: false, problem: 'damaged' };
+    if (title.trim()) drawing.title = title.trim();
+  }
+  return { ok: true, drawing };
 }
 
 /**

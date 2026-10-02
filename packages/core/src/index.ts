@@ -31,3 +31,4 @@ export * from './stroke/snap/snap.ts';
 export * from './eval/labeled.ts';
 export * from './eval/shapes.ts';
 export * from './doodle/raster.ts';
+export * from './doodle/group.ts';
