@@ -22,6 +22,7 @@ import {
   PinchTracker,
   sampleTimeline,
   screenToCanvas,
+  snapStroke,
   eraseStrokes,
   StrokeBuilder,
   ToolGestureTracker,
@@ -36,6 +37,7 @@ import {
   type PenSample,
   type PenState,
   type SessionRecording,
+  type ShapeKind,
   type Stroke,
   type StrokeStyle,
   type Timeline,
@@ -95,6 +97,15 @@ interface Replay {
 }
 
 const newId = () => crypto.randomUUID();
+
+const SHAPE_NAMES: Record<ShapeKind, string> = {
+  line: 'a line',
+  circle: 'a circle',
+  ellipse: 'an ellipse',
+  rectangle: 'a rectangle',
+  triangle: 'a triangle',
+  arrow: 'an arrow',
+};
 
 const HELP_SEEN_KEY = 'afterglow:gestures-help-seen';
 
@@ -177,6 +188,8 @@ export class Studio {
   private bench: BenchCollector | null = null;
   private benchRunning = false;
   private clearArmedUntil = 0;
+  /** The first snap of a session says what happened and how to undo it. */
+  private snapExplained = false;
   /** Pointers drawing right now, by pointer id, and the pen each drives. */
   private activePointers = new Map<number, string>();
 
@@ -1093,8 +1106,23 @@ export class Studio {
     }
     if (r.kind === 'end') {
       this.history.add(r.stroke);
+      this.snap(r.stroke);
       if (!useStudioStore.getState().hasDrawn) useStudioStore.setState({ hasDrawn: true });
     }
+  }
+
+  /**
+   * Swaps a finished stroke for the clean shape it looks like (ADR 0014), as its own
+   * undo step: undo brings back the stroke as drawn.
+   */
+  private snap(stroke: Stroke): void {
+    if (!useStudioStore.getState().snap) return;
+    const snapped = snapStroke(stroke, newId);
+    if (!snapped) return;
+    this.history.replace([stroke], snapped.strokes);
+    if (this.snapExplained) return;
+    this.snapExplained = true;
+    showToast(`Snapped to ${SHAPE_NAMES[snapped.shape]}. Undo keeps it as drawn.`);
   }
 
   private pointerSample(e: PointerEvent): PenSample {

@@ -181,3 +181,11 @@ export const OpenIcon = () => (
     <path d="M4 14.5v1a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5v-1" />
   </Icon>
 );
+
+export const SnapIcon = () => (
+  <Icon>
+    <path d="M3.5 12.5c1.2-3.6 2.6-1.4 3.8-4.6" opacity="0.55" />
+    <circle cx="13" cy="7.5" r="3.5" />
+    <rect x="9" y="12" width="7" height="5" rx="0.6" />
+  </Icon>
+);

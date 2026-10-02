@@ -22,6 +22,7 @@ const KEYS: ReadonlyArray<{ keys: string; does: string; camera?: boolean }> = [
   { keys: `${key('undo')}, ${key('redo')}`, does: 'Undo, redo' },
   { keys: 'Delete twice', does: 'Clear everything' },
   { keys: key('fade'), does: 'Let strokes fade, or keep them' },
+  { keys: key('snap'), does: 'Snap shapes on or off' },
   { keys: key('darkroom'), does: 'Darkroom on or off', camera: true },
   { keys: 'P', does: 'Pause or resume hand drawing', camera: true },
   { keys: key('replay'), does: 'Replay as a timelapse' },

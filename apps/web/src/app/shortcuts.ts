@@ -90,6 +90,9 @@ export function useShortcuts(studio: Studio | null): void {
         case 'f':
           run('fade');
           break;
+        case 'g':
+          run('snap');
+          break;
         case 'd':
           run('darkroom');
           break;

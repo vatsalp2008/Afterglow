@@ -22,6 +22,7 @@ import {
   RedoIcon,
   RibbonIcon,
   SaveIcon,
+  SnapIcon,
   SparksIcon,
   StillIcon,
   StopIcon,
@@ -135,6 +136,15 @@ const list: Command[] = [
     run: (_, s) => set({ fade: !s.fade }),
     pressed: (s) => s.fade,
     done: (s) => (s.fade ? 'Strokes fade like a long exposure' : 'Strokes stay'),
+  },
+  {
+    id: 'snap',
+    label: () => 'Snap shapes',
+    icon: () => <SnapIcon />,
+    key: 'G',
+    run: (_, s) => set({ snap: !s.snap }),
+    pressed: (s) => s.snap,
+    done: (s) => (s.snap ? 'Shapes snap when you finish them' : 'Shapes stay as drawn'),
   },
   {
     id: 'darkroom',
@@ -286,6 +296,7 @@ export function menuTree(s: StudioState): MenuItem[] {
       id: 'menu:more',
       children: [
         item('fade', s),
+        item('snap', s),
         ...(s.inputMode === 'camera' ? [item('darkroom', s)] : []),
         item('replay', s),
         {

@@ -114,6 +114,7 @@ export function Dock({ studio }: { studio: Studio }) {
       <Divider />
       <div className={styles.group}>
         <CommandButton id="fade" studio={studio} s={s} pressed={false} />
+        <CommandButton id="snap" studio={studio} s={s} />
         {s.inputMode === 'camera' && <CommandButton id="darkroom" studio={studio} s={s} pressed={false} />}
       </div>
       <Divider />

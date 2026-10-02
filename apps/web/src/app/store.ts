@@ -99,6 +99,8 @@ export interface StudioState {
   color: string;
   size: SizeId;
   fade: boolean;
+  /** Finished strokes that look like a line, circle, ellipse, rectangle, triangle, or arrow become clean ones. */
+  snap: boolean;
   darkroom: boolean;
 
   hudOpen: boolean;
@@ -149,6 +151,7 @@ export const useStudioStore = create<StudioState>()(() => ({
   size: 'm',
   // Strokes stay unless fading is switched on (F).
   fade: false,
+  snap: true,
   darkroom: true,
 
   hudOpen: false,
