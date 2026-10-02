@@ -23,3 +23,4 @@ export * from './gesture/tools.ts';
 export * from './gesture/menu.ts';
 export * from './gesture/penShape.ts';
 export * from './stroke/angle.ts';
+export * from './drawing.ts';

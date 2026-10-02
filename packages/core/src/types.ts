@@ -36,7 +36,8 @@ export interface HandFrame {
 
 export type PenState = 'idle' | 'hover' | 'drawing';
 
-export type BrushId = 'neon' | 'sparks' | 'ink' | 'ribbon';
+export const BRUSH_IDS = ['neon', 'sparks', 'ink', 'ribbon'] as const;
+export type BrushId = (typeof BRUSH_IDS)[number];
 
 /** A point on the input path, in view space (mirrored, normalized [0,1]). */
 export interface PenSample {
