@@ -74,6 +74,10 @@ export interface StrokePoint {
   angle?: number;
 }
 
+export const SHAPE_KINDS = ['line', 'circle', 'ellipse', 'rectangle', 'triangle', 'arrow'] as const;
+/** A clean shape a stroke was snapped to (stroke/snap). */
+export type ShapeKind = (typeof SHAPE_KINDS)[number];
+
 export interface Stroke {
   id: string;
   brush: BrushId;
@@ -83,4 +87,6 @@ export interface Stroke {
   size: number;
   points: StrokePoint[];
   createdAt: number;
+  /** Set when the stroke is a snapped clean shape. */
+  shape?: ShapeKind;
 }

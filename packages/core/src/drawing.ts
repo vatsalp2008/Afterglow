@@ -3,7 +3,7 @@
 // anywhere, so parsing checks every field and copies only the known ones.
 
 import type { FrameSize } from './coords.ts';
-import { BRUSH_IDS, type BrushId, type Stroke, type StrokePoint } from './types.ts';
+import { BRUSH_IDS, SHAPE_KINDS, type BrushId, type ShapeKind, type Stroke, type StrokePoint } from './types.ts';
 
 export const DRAWING_FORMAT = 'afterglow.drawing';
 export const DRAWING_VERSION = 1;
@@ -41,18 +41,22 @@ export function toDrawing(strokes: readonly Stroke[], frame: FrameSize): Drawing
     format: DRAWING_FORMAT,
     version: DRAWING_VERSION,
     frame: { width: round(frame.width, 2), height: round(frame.height, 2) },
-    strokes: strokes.map((s) => ({
-      id: s.id,
-      brush: s.brush,
-      color: s.color,
-      size: round(s.size, 2),
-      createdAt: round(s.createdAt, 1),
-      points: s.points.map((p) => {
-        const point: StrokePoint = { x: round(p.x, 2), y: round(p.y, 2), depth: round(p.depth, 3), t: round(p.t, 1) };
-        if (p.angle !== undefined) point.angle = round(p.angle, 4);
-        return point;
-      }),
-    })),
+    strokes: strokes.map((s) => {
+      const stroke: Stroke = {
+        id: s.id,
+        brush: s.brush,
+        color: s.color,
+        size: round(s.size, 2),
+        createdAt: round(s.createdAt, 1),
+        points: s.points.map((p) => {
+          const point: StrokePoint = { x: round(p.x, 2), y: round(p.y, 2), depth: round(p.depth, 3), t: round(p.t, 1) };
+          if (p.angle !== undefined) point.angle = round(p.angle, 4);
+          return point;
+        }),
+      };
+      if (s.shape) stroke.shape = s.shape;
+      return stroke;
+    }),
   };
 }
 
@@ -89,7 +93,7 @@ function readStroke(v: unknown): Stroke {
   const size = finite(v['size']);
   if (size < DRAWING_LIMITS.size.min || size > DRAWING_LIMITS.size.max) throw new Damaged();
   if (v['points'].length > DRAWING_LIMITS.pointsPerStroke) throw new TooLarge();
-  return {
+  const stroke: Stroke = {
     id,
     brush: brush as BrushId,
     color,
@@ -97,6 +101,11 @@ function readStroke(v: unknown): Stroke {
     createdAt: finite(v['createdAt']),
     points: v['points'].map(readPoint),
   };
+  if (v['shape'] !== undefined) {
+    if (!SHAPE_KINDS.includes(v['shape'] as ShapeKind)) throw new Damaged();
+    stroke.shape = v['shape'] as ShapeKind;
+  }
+  return stroke;
 }
 
 /** Reads a drawing file, or says what's wrong with it. */
@@ -158,12 +167,16 @@ export function placeDrawing(drawing: Drawing, frame: FrameSize, now: number, cr
   let newest = -Infinity;
   for (const s of strokes) for (const p of s.points) newest = Math.max(newest, p.t);
   const shift = Number.isFinite(newest) ? now - newest : 0;
-  return strokes.map((s) => ({
-    id: createId(),
-    brush: s.brush,
-    color: s.color,
-    size: s.size * scale,
-    createdAt: s.createdAt + shift,
-    points: s.points.map((p) => ({ ...p, x: p.x * scale + dx, y: p.y * scale + dy, t: p.t + shift })),
-  }));
+  return strokes.map((s) => {
+    const placed: Stroke = {
+      id: createId(),
+      brush: s.brush,
+      color: s.color,
+      size: s.size * scale,
+      createdAt: s.createdAt + shift,
+      points: s.points.map((p) => ({ ...p, x: p.x * scale + dx, y: p.y * scale + dy, t: p.t + shift })),
+    };
+    if (s.shape) placed.shape = s.shape;
+    return placed;
+  });
 }

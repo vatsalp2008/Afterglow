@@ -40,6 +40,25 @@ describe('drawing files', () => {
     expect(parsed.drawing.frame).toEqual({ width: 1333.33, height: 1000 });
   });
 
+  it('keep the shape a stroke was snapped to', () => {
+    const snapped = toDrawing(
+      [
+        stroke(
+          's',
+          [
+            [0, 0, 0],
+            [10, 0, 16],
+          ],
+          { shape: 'line' },
+        ),
+      ],
+      frame,
+    );
+    const parsed = parseDrawing(saved(snapped));
+    expect(parsed.ok && parsed.drawing.strokes[0]!.shape).toBe('line');
+    expect(parsed.ok && placeDrawing(parsed.drawing, frame, 0, () => 'p')[0]!.shape).toBe('line');
+  });
+
   it('copy only the fields they know', () => {
     const d = sample() as unknown as { strokes: Array<Record<string, unknown>> } & Record<string, unknown>;
     d['extra'] = 1;
@@ -76,6 +95,7 @@ describe('drawing files', () => {
     ['a point far off the canvas', (s) => ((s['points'] as Array<Record<string, unknown>>)[0]!['y'] = 1e9)],
     ['a depth of zero', (s) => ((s['points'] as Array<Record<string, unknown>>)[0]!['depth'] = 0)],
     ['a broken angle', (s) => ((s['points'] as Array<Record<string, unknown>>)[0]!['angle'] = null)],
+    ['an unknown shape', (s) => (s['shape'] = 'hexagon')],
   ])('reject a stroke with %s', (_, damage) => {
     const d = JSON.parse(saved(sample())) as { strokes: Array<Record<string, unknown>> };
     damage(d.strokes[0]!);
