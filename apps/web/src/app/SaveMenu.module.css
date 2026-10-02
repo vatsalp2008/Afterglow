@@ -1,0 +1,59 @@
+.wrap {
+  position: relative;
+  display: grid;
+}
+
+.list {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  /* Opens leftward from the button, near the dock's right end, so it stays on screen. */
+  right: -6px;
+  display: grid;
+  gap: 2px;
+  min-width: 260px;
+  padding: 6px;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--paper);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.item svg {
+  color: var(--fog);
+}
+
+.item:hover:not(:disabled),
+.item:focus-visible {
+  background: rgba(233, 236, 245, 0.08);
+}
+
+.item:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.key {
+  color: var(--fog);
+  font: inherit;
+  font-size: 12.5px;
+}
+
+@media (pointer: coarse) {
+  .item {
+    min-height: 48px;
+  }
+}

@@ -150,3 +150,34 @@ export const CloseIcon = () => (
     <path d="m5.5 5.5 9 9M14.5 5.5l-9 9" />
   </Icon>
 );
+
+export const SaveIcon = () => (
+  <Icon>
+    <path d="M10 3.5v9M6.5 9l3.5 3.5L13.5 9" />
+    <path d="M4 14.5v1a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5v-1" />
+  </Icon>
+);
+
+export const VectorIcon = () => (
+  <Icon>
+    <path d="M4.5 15.5C6 9 9 5.5 15.5 4.5" />
+    <rect x="2.75" y="13.75" width="3.5" height="3.5" rx="0.6" />
+    <rect x="13.75" y="2.75" width="3.5" height="3.5" rx="0.6" />
+    <path d="M8 8.5 15.5 4.5" opacity="0.55" />
+  </Icon>
+);
+
+export const FileIcon = () => (
+  <Icon>
+    <path d="M5.5 3h6l3.5 3.5V16a1 1 0 0 1-1 1h-8.5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
+    <path d="M11.5 3v3.5H15" />
+    <path d="M7 12.5c1.2-2.4 2.4-2.4 3 0s1.8 2.4 3 0" />
+  </Icon>
+);
+
+export const OpenIcon = () => (
+  <Icon>
+    <path d="M10 13V4.5M6.5 8 10 4.5 13.5 8" />
+    <path d="M4 14.5v1a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5v-1" />
+  </Icon>
+);

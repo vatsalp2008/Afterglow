@@ -38,6 +38,27 @@ describe('menuTree', () => {
     expect(wedges[2]?.id).toBe('clear');
   });
 
+  it('saves the image, the vector image, the drawing file, and the video from More', () => {
+    const save = (s: StudioState) =>
+      menuTree(s)
+        .find((i) => i.id === 'menu:more')!
+        .children!.find((i) => i.id === 'menu:save')!;
+    expect(save(state({ strokeCount: 1 })).children!.map((i) => i.id)).toEqual([
+      'still',
+      'svg',
+      'drawing:save',
+      'video',
+    ]);
+    expect(save(state({ strokeCount: 1 })).disabled).toBe(false);
+    expect(save(state({ strokeCount: 0 })).disabled).toBe(true);
+  });
+
+  it('leaves opening a file to the mouse and keyboard', () => {
+    const ids = (items: ReturnType<typeof menuTree>): string[] =>
+      items.flatMap((i) => [i.id, ...ids(i.children ?? [])]);
+    expect(ids(menuTree(state({ strokeCount: 1 })))).not.toContain('drawing:open');
+  });
+
   it('offers only Stop during a replay', () => {
     expect(menuTree(state({ replaying: true })).map((i) => i.id)).toEqual(['stop']);
   });
@@ -55,7 +76,9 @@ describe('menuTree', () => {
 describe('commands', () => {
   it('describe every menu item', () => {
     const s = state({ inputMode: 'camera', strokeCount: 1 });
-    const ids = menuTree(s).flatMap((i) => [i.id, ...(i.children ?? []).map((c) => c.id)]);
+    const all = (items: ReturnType<typeof menuTree>): string[] =>
+      items.flatMap((i) => [i.id, ...all(i.children ?? [])]);
+    const ids = all(menuTree(s));
     for (const id of ids) expect(menuEntry(id, s).label.length).toBeGreaterThan(0);
   });
 

@@ -4,6 +4,7 @@ import type { Studio } from '../studio/studio';
 import { SIZES, type SizeId } from './brushes';
 import { BRUSHES, command, isEnabled } from './commands';
 import styles from './Dock.module.css';
+import { SaveMenu } from './SaveMenu';
 import { useStudioStore, type StudioState } from './store';
 
 const Divider = () => <span className={styles.divider} aria-hidden="true" />;
@@ -122,10 +123,10 @@ export function Dock({ studio }: { studio: Studio }) {
       <Divider />
       <div className={styles.group}>
         <CommandButton id={s.replaying && !s.recordingVideo ? 'stop' : 'replay'} studio={studio} s={s} />
-        <CommandButton id="still" studio={studio} s={s} />
         <span className={s.recordingVideo ? styles.recording : undefined}>
           <CommandButton id={s.recordingVideo ? 'stop' : 'video'} studio={studio} s={s} />
         </span>
+        <SaveMenu studio={studio} s={s} />
       </div>
       <Divider />
       <IconButton label="Stats (H)" pressed={s.hudOpen} onClick={() => set({ hudOpen: !s.hudOpen })}>

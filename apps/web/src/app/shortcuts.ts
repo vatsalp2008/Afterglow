@@ -9,12 +9,28 @@ import type { SizeId } from './brushes';
 const BRUSH_ORDER: BrushId[] = BRUSHES.map((b) => b.id);
 const SIZE_ORDER: SizeId[] = ['s', 'm', 'l'];
 
+/**
+ * Disabled with nothing drawn, but the studio says so itself ("Nothing to save yet"),
+ * so a key press isn't silently ignored.
+ */
+const ANSWERS_EMPTY = new Set(['still', 'svg', 'drawing:save', 'replay', 'video']);
+
+/** Keys typed into a field, a select, or editable text belong to it. */
+function isTyping(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLSelectElement ||
+    target instanceof HTMLTextAreaElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
+}
+
 export function useShortcuts(studio: Studio | null): void {
   useEffect(() => {
     if (!studio) return;
     const onKey = (e: KeyboardEvent) => {
       const s = useStudioStore.getState();
-      if (s.phase !== 'studio' || e.target instanceof HTMLInputElement) return;
+      if (s.phase !== 'studio' || isTyping(e.target)) return;
       const set = useStudioStore.setState;
       const key = e.key.toLowerCase();
       const mod = e.metaKey || e.ctrlKey;
@@ -22,7 +38,7 @@ export function useShortcuts(studio: Studio | null): void {
       // Keys run the same commands as the dock and the gesture menu.
       const run = (id: string) => {
         const c = command(id);
-        if (isEnabled(c, s)) c.run(studio, s);
+        if (isEnabled(c, s) || ANSWERS_EMPTY.has(id)) c.run(studio, s);
       };
       if (key === 'z') {
         e.preventDefault();
@@ -32,6 +48,17 @@ export function useShortcuts(studio: Studio | null): void {
       if (mod && key === 'y') {
         e.preventDefault();
         run('redo');
+        return;
+      }
+      // Instead of saving or opening the page itself.
+      if (mod && key === 's') {
+        e.preventDefault();
+        run('drawing:save');
+        return;
+      }
+      if (mod && key === 'o') {
+        e.preventDefault();
+        run('drawing:open');
         return;
       }
       if (mod || e.altKey) return;
@@ -76,7 +103,7 @@ export function useShortcuts(studio: Studio | null): void {
           run(s.replaying ? 'stop' : 'video');
           break;
         case 's':
-          run('still');
+          run(e.shiftKey ? 'svg' : 'still');
           break;
         case 'r':
           studio.toggleSessionRecording();

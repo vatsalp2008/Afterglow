@@ -8,6 +8,7 @@ import {
   ClearIcon,
   EraserIcon,
   FadeIcon,
+  FileIcon,
   FixIcon,
   HelpIcon,
   InkIcon,
@@ -15,14 +16,17 @@ import {
   MoonIcon,
   MoreIcon,
   NeonIcon,
+  OpenIcon,
   PlayIcon,
   RecordIcon,
   RedoIcon,
   RibbonIcon,
+  SaveIcon,
   SparksIcon,
   StillIcon,
   StopIcon,
   UndoIcon,
+  VectorIcon,
 } from '@afterglow/ui';
 import type { ReactNode } from 'react';
 import type { Studio } from '../studio/studio';
@@ -51,6 +55,9 @@ export const BRUSHES: Array<{ id: BrushId; label: string; icon: ReactNode }> = [
 ];
 
 export const SIZE_LABELS: Record<SizeId, string> = { s: 'Thin', m: 'Medium', l: 'Thick' };
+
+/** The modifier for Save and Open shortcuts, as the platform names it. */
+export const MOD_KEY = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? 'Cmd' : 'Ctrl';
 
 const set = useStudioStore.setState;
 const hasStrokes = (s: StudioState) => s.strokeCount > 0;
@@ -159,6 +166,32 @@ const list: Command[] = [
     done: () => '',
   },
   {
+    id: 'svg',
+    label: () => 'Save vector image (SVG)',
+    icon: () => <VectorIcon />,
+    key: 'Shift S',
+    run: (studio) => studio.saveSvg(),
+    enabled: hasStrokes,
+    done: () => '',
+  },
+  {
+    id: 'drawing:save',
+    label: () => 'Save drawing file',
+    icon: () => <FileIcon />,
+    key: `${MOD_KEY} S`,
+    run: (studio) => studio.saveDrawing(),
+    enabled: hasStrokes,
+    done: () => '',
+  },
+  {
+    // Not in the gesture menu: browsers only show a file picker after a click or a key.
+    id: 'drawing:open',
+    label: () => 'Open a drawing file',
+    icon: () => <OpenIcon />,
+    key: `${MOD_KEY} O`,
+    run: (studio) => void studio.openDrawingFile(),
+  },
+  {
     id: 'video',
     label: () => 'Record timelapse video',
     icon: () => <RecordIcon />,
@@ -212,6 +245,7 @@ const SUBMENUS: Record<string, { label: string; icon: (s: StudioState) => ReactN
   'menu:size': { label: 'Size', icon: (s) => <SizeDot size={s.size} /> },
   'menu:clear': { label: 'Clear', icon: () => <ClearIcon /> },
   'menu:more': { label: 'More', icon: () => <MoreIcon /> },
+  'menu:save': { label: 'Save', icon: () => <SaveIcon /> },
 };
 
 /** How a menu item looks: a submenu or a command. */
@@ -254,8 +288,11 @@ export function menuTree(s: StudioState): MenuItem[] {
         item('fade', s),
         ...(s.inputMode === 'camera' ? [item('darkroom', s)] : []),
         item('replay', s),
-        item('still', s),
-        item('video', s),
+        {
+          id: 'menu:save',
+          disabled: !hasStrokes(s),
+          children: [item('still', s), item('svg', s), item('drawing:save', s), item('video', s)],
+        },
         item('help', s),
       ],
     },

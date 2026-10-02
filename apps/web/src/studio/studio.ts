@@ -14,6 +14,9 @@ import {
   History,
   MenuController,
   LandmarkFilter,
+  parseDrawing,
+  placeDrawing,
+  toDrawing,
   landmarkToView,
   penSample,
   PinchTracker,
@@ -40,7 +43,7 @@ import {
   type Vec2,
   type Viewport,
 } from '@afterglow/core';
-import { LightRenderer } from '@afterglow/render';
+import { LightRenderer, strokesToSvg } from '@afterglow/render';
 import {
   CameraError,
   FixtureTracker,
@@ -56,6 +59,7 @@ import { menuTree, runByGesture } from '../app/commands';
 import { showToast, useStudioStore, type StudioState } from '../app/store';
 import { DemoPen } from './demoPen';
 import { download, downloadJson, stamp } from './download';
+import { carriesFiles, MAX_DRAWING_BYTES, OPEN_PROBLEM_COPY, pickDrawingFile } from './drawingFile';
 import { loadFixture } from './fixtures';
 import type { Scenario } from './scenarios';
 import { SessionCapture } from './sessionCapture';
@@ -229,6 +233,9 @@ export class Studio {
     listen(els.canvas, 'pointerup', this.onPointerUp);
     listen(els.canvas, 'pointercancel', this.onPointerUp);
     listen(els.canvas, 'pointerleave', this.onPointerLeave);
+    // A drawing file dropped anywhere opens; without this the browser would navigate to it.
+    listen(window, 'dragover', this.onDragOver);
+    listen(window, 'drop', this.onDrop);
     this.disposers.push(useStudioStore.subscribe(this.onSettings));
     this.raf = requestAnimationFrame(this.tick);
   }
@@ -436,6 +443,63 @@ export class Studio {
     } catch {
       showToast('Could not save the image');
     }
+  }
+
+  /** The drawing as an SVG, cropped like the PNG to what's on screen (ADR 0012). */
+  saveSvg(): void {
+    if (this.history.strokes.length === 0) {
+      showToast('Nothing to save yet. Draw something first.');
+      return;
+    }
+    const svg = strokesToSvg(this.history.strokes, visibleCanvasRect(this.frame, this.viewport));
+    download(new Blob([svg], { type: 'image/svg+xml' }), `afterglow-${stamp()}.svg`);
+    showToast('Vector image saved');
+  }
+
+  /** The strokes and their timing, to open again later. */
+  saveDrawing(): void {
+    if (this.history.strokes.length === 0) {
+      showToast('Nothing to save yet. Draw something first.');
+      return;
+    }
+    downloadJson(toDrawing(this.history.strokes, this.frame), `afterglow-${stamp()}.json`);
+    showToast('Drawing file saved');
+  }
+
+  async openDrawingFile(): Promise<void> {
+    const file = await pickDrawingFile();
+    if (file) await this.openDrawing(file);
+  }
+
+  /** Replaces the canvas with a saved drawing, in one step that undo reverses. */
+  async openDrawing(file: File): Promise<void> {
+    if (file.size > MAX_DRAWING_BYTES) {
+      showToast(OPEN_PROBLEM_COPY.tooLarge);
+      return;
+    }
+    let text: string;
+    try {
+      text = await file.text();
+    } catch {
+      showToast(OPEN_PROBLEM_COPY.unreadable);
+      return;
+    }
+    const parsed = parseDrawing(text);
+    if (!parsed.ok) {
+      showToast(OPEN_PROBLEM_COPY[parsed.problem]);
+      return;
+    }
+    const strokes = placeDrawing(parsed.drawing, this.frame, this.now(), newId);
+    if (strokes.length === 0) {
+      showToast(OPEN_PROBLEM_COPY.empty);
+      return;
+    }
+    this.stopReplay();
+    for (const s of this.builder.finishAll()) this.history.add(s);
+    const replaced = this.history.strokes.length > 0;
+    this.history.replace(this.history.strokes, strokes);
+    const count = `${String(strokes.length)} ${strokes.length === 1 ? 'stroke' : 'strokes'}`;
+    showToast(`Opened a drawing with ${count}.${replaced ? ' Undo brings back the one before.' : ''}`);
   }
 
   startReplay(record = false): void {
@@ -935,6 +999,24 @@ export class Studio {
     this.pointerActive = false;
     this.handleEvents([{ type: 'strokeEnd', t: this.eventTime(e), handKey: POINTER_KEY, reason: 'release' }]);
     if (e.pointerType !== 'mouse') this.pens.delete(POINTER_KEY);
+  };
+
+  private onDragOver = (e: DragEvent): void => {
+    if (!carriesFiles(e)) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+  };
+
+  private onDrop = (e: DragEvent): void => {
+    if (!carriesFiles(e)) return;
+    e.preventDefault();
+    const file = e.dataTransfer?.files[0];
+    if (!file) return;
+    if (this.mode === 'intro') {
+      if (useStudioStore.getState().phase !== 'intro') return;
+      this.startPointer();
+    }
+    void this.openDrawing(file);
   };
 
   private onPointerLeave = (): void => {
