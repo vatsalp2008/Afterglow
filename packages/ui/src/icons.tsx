@@ -189,3 +189,11 @@ export const SnapIcon = () => (
     <rect x="9" y="12" width="7" height="5" rx="0.6" />
   </Icon>
 );
+
+export const RefineIcon = () => (
+  <Icon>
+    <path d="M3.5 15.5c2-1 3-4.5 5-4.5s2.5 2.5 4.5 2.5 2.5-4 3.5-5.5" opacity="0.5" />
+    <path d="M13 3.5l.7 1.6 1.6.7-1.6.7-.7 1.6-.7-1.6-1.6-.7 1.6-.7z" />
+    <path d="M6 4.5l.45 1.05 1.05.45-1.05.45L6 7.5l-.45-1.05L4.5 6l1.05-.45z" />
+  </Icon>
+);

@@ -20,6 +20,7 @@ import {
   PlayIcon,
   RecordIcon,
   RedoIcon,
+  RefineIcon,
   RibbonIcon,
   SaveIcon,
   SnapIcon,
@@ -155,6 +156,16 @@ const list: Command[] = [
     enabled: (s) => s.inputMode === 'camera',
     pressed: (s) => s.darkroom,
     done: (s) => (s.darkroom ? 'Darkroom on' : 'Darkroom off'),
+  },
+  {
+    id: 'refine',
+    label: (s) => (s.refining ? 'Refining…' : 'Refine'),
+    icon: () => <RefineIcon />,
+    key: 'R',
+    run: (studio) => void studio.refine(),
+    enabled: (s) => hasStrokes(s) && !s.refining && !s.replaying,
+    // The studio says how it went when the art arrives.
+    done: () => 'Refining your drawing…',
   },
   {
     id: 'replay',
@@ -298,6 +309,7 @@ export function menuTree(s: StudioState): MenuItem[] {
         item('fade', s),
         item('snap', s),
         ...(s.inputMode === 'camera' ? [item('darkroom', s)] : []),
+        item('refine', s),
         item('replay', s),
         {
           id: 'menu:save',

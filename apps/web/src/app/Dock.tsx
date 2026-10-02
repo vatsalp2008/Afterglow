@@ -131,6 +131,7 @@ export function Dock({ studio }: { studio: Studio }) {
       </div>
       <Divider />
       <div className={styles.group}>
+        <CommandButton id="refine" studio={studio} s={s} pressed={false} />
         <CommandButton id={s.replaying && !s.recordingVideo ? 'stop' : 'replay'} studio={studio} s={s} />
         <span className={s.recordingVideo ? styles.recording : undefined}>
           <CommandButton id={s.recordingVideo ? 'stop' : 'video'} studio={studio} s={s} />

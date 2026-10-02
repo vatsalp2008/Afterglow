@@ -112,7 +112,9 @@ export function useShortcuts(studio: Studio | null): void {
           run(e.shiftKey ? 'svg' : 'still');
           break;
         case 'r':
-          studio.toggleSessionRecording();
+          // Shift R records a hand session (a developer tool, ?record=fixtures has the guided form).
+          if (e.shiftKey) studio.toggleSessionRecording();
+          else run('refine');
           break;
         case 'p':
           if (s.inputMode !== 'pointer') studio.togglePause();

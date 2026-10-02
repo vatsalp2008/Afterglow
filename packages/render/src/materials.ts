@@ -2,6 +2,8 @@
 // ink is a matte, normally blended stroke drawn after bloom.
 // Both fade per vertex: brightness = exp(-age / tau), so a stroke's tail dims
 // first, like the afterimage of a moving light. tau = 0 keeps strokes fixed.
+// Points timed after "now" aren't drawn yet: strokes timed ahead draw themselves in as
+// the clock reaches them, which is how refined art appears (ADR 0016).
 
 import { AdditiveBlending, DoubleSide, NormalBlending, ShaderMaterial } from 'three';
 
@@ -25,8 +27,10 @@ const vertexShader = /* glsl */ `
   varying float vFade;
   varying float vBright;
   varying vec3 vColor;
+  varying float vDue;
   void main() {
     vAcross = aAcross;
+    vDue = aTime <= uNow ? 1.0 : 0.0;
     float age = max(uNow - aTime, 0.0);
     vFade = uFadeTau > 0.0 ? exp(-age / uFadeTau) : 1.0;
     vBright = aBright;
@@ -41,7 +45,9 @@ const neonFragment = /* glsl */ `
   varying float vFade;
   varying float vBright;
   varying vec3 vColor;
+  varying float vDue;
   void main() {
+    if (vDue < 0.5) discard;
     float d = abs(vAcross);
     float core = 1.0 - smoothstep(0.0, 0.45, d);
     float body = 1.0 - smoothstep(0.2, 1.0, d);
@@ -56,7 +62,9 @@ const ribbonFragment = /* glsl */ `
   varying float vFade;
   varying float vBright;
   varying vec3 vColor;
+  varying float vDue;
   void main() {
+    if (vDue < 0.5) discard;
     float d = abs(vAcross);
     float rim = smoothstep(0.55, 1.0, d);
     vec3 col = vColor * (0.7 + 1.1 * rim) + vec3(1.0, 0.95, 0.88) * rim * rim * 0.5;
@@ -69,7 +77,9 @@ const inkFragment = /* glsl */ `
   varying float vFade;
   varying float vBright;
   varying vec3 vColor;
+  varying float vDue;
   void main() {
+    if (vDue < 0.5) discard;
     float d = abs(vAcross);
     float a = 1.0 - smoothstep(0.75, 1.0, d);
     gl_FragColor = vec4(vColor * 0.7, a * vFade);

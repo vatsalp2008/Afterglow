@@ -23,6 +23,8 @@ import {
   landmarkToView,
   latestGroup,
   penSample,
+  refineBox,
+  refinedStrokes,
   PinchTracker,
   sampleTimeline,
   screenToCanvas,
@@ -67,6 +69,8 @@ import { menuTree, runByGesture } from '../app/commands';
 import { showToast, useStudioStore, type StartError, type StudioState } from '../app/store';
 import { DemoPen } from './demoPen';
 import { DoodleModel } from './doodleModel';
+import { REFINE_PROBLEM_COPY, refineProblem } from './refineCopy';
+import { refineImage } from './refineImage';
 import { download, downloadJson, fileName, stamp } from './download';
 import { carriesFiles, MAX_DRAWING_BYTES, OPEN_PROBLEM_COPY, pickDrawingFile } from './drawingFile';
 import { loadFixture } from './fixtures';
@@ -104,6 +108,14 @@ interface Replay {
 }
 
 const newId = () => crypto.randomUUID();
+
+/** Where the API is: proxied in development and preview, set per deployment otherwise. */
+const API_URL = (import.meta.env['VITE_API_URL'] as string | undefined) ?? `${import.meta.env.BASE_URL}api`;
+/** Refine gives up after this long; the API's own limit is 25 s. */
+const REFINE_TIMEOUT_MS = 35_000;
+/** Refined art starts drawing in this long after it arrives. */
+const REFINE_LEAD_MS = 150;
+const REFINE_NOTICE_KEY = 'afterglow:refine-notice-seen';
 
 /** A doodle guess shows when the model gives it at least this probability. */
 const MIN_GUESS = 0.55;
@@ -209,6 +221,8 @@ export class Studio {
   private doodleFailed = false;
   /** Hands whose pinch accepted a guess: that pinch draws nothing. */
   private swallowed = new Set<string>();
+  private refining = false;
+  private refineMs: number | null = null;
   /** Pointers drawing right now, by pointer id, and the pen each drives. */
   private activePointers = new Map<number, string>();
 
@@ -731,7 +745,7 @@ export class Studio {
     }
     this.session.start(scenario, person);
     useStudioStore.setState({ session: { scenario: scenario?.id ?? null } });
-    if (!scenario) showToast('Recording session. Press R to stop.');
+    if (!scenario) showToast('Recording session. Press Shift R to stop.');
   }
 
   stopSession(): void {
@@ -1147,9 +1161,11 @@ export class Studio {
         case 'pause':
           this.togglePause();
           break;
-        case 'openMenu':
         case 'refine':
-          // Counted in the stats panel; the radial menu and Refine arrive in later phases.
+          void this.refine();
+          break;
+        case 'openMenu':
+          // The menu controller handles it (handleMenu); counted in the stats panel.
           break;
       }
     }
@@ -1173,6 +1189,77 @@ export class Studio {
    * Swaps a finished stroke for the clean shape it looks like (ADR 0014), as its own
    * undo step: undo brings back the stroke as drawn.
    */
+  /**
+   * Refine (ADR 0016): sends a picture of the strokes to the API, and swaps the clean art
+   * it returns in for them, as one undo step, drawing itself in. Drawing carries on while
+   * it waits; strokes drawn meanwhile stay.
+   */
+  async refine(): Promise<void> {
+    if (this.refining || this.replay || this.mode !== 'studio') return;
+    for (const st of this.builder.finishAll()) this.history.add(st);
+    const sent = [...this.history.strokes];
+    const box = refineBox(sent);
+    if (!box) {
+      showToast('Nothing to refine yet. Draw something first.');
+      return;
+    }
+    this.refining = true;
+    useStudioStore.setState({ refining: true });
+    if (this.firstRefine()) showToast('Refine sends a picture of your strokes, never the camera, to Google Gemini.');
+    const t0 = performance.now();
+    try {
+      const image = await refineImage(sent, box);
+      const res = await fetch(`${API_URL}/refine`, {
+        method: 'POST',
+        headers: { 'content-type': 'image/png' },
+        body: image,
+        signal: AbortSignal.timeout(REFINE_TIMEOUT_MS),
+      });
+      const body = (await res.json().catch(() => null)) as {
+        title?: unknown;
+        paths?: Array<{ d?: unknown }>;
+        error?: unknown;
+      } | null;
+      if (!res.ok || !body || !Array.isArray(body.paths)) {
+        showToast(REFINE_PROBLEM_COPY[refineProblem(res.status, body?.error)]);
+        return;
+      }
+      const paths = body.paths.map((p) => (typeof p.d === 'string' ? p.d : ''));
+      const refined = refinedStrokes(paths, box, this.style(), this.now() + REFINE_LEAD_MS, newId);
+      if (!refined || refined.length === 0) {
+        showToast(REFINE_PROBLEM_COPY.invalidOutput);
+        return;
+      }
+      this.refineMs = performance.now() - t0;
+      const current = new Set(this.history.strokes.map((st) => st.id));
+      this.history.replace(
+        sent.filter((st) => current.has(st.id)),
+        refined,
+      );
+      const title = typeof body.title === 'string' && body.title.trim() ? body.title.trim() : null;
+      this.guessedGroup = '';
+      useStudioStore.setState({ drawingName: title, guess: null });
+      showToast(title ? `Refined: ${title}. Undo brings back your sketch.` : 'Refined. Undo brings back your sketch.');
+    } catch (err) {
+      const timedOut = err instanceof DOMException && err.name === 'TimeoutError';
+      showToast(REFINE_PROBLEM_COPY[timedOut ? 'timeout' : 'offline']);
+    } finally {
+      this.refining = false;
+      useStudioStore.setState({ refining: false });
+    }
+  }
+
+  /** True the first time Refine is used on this device, to say what it sends. */
+  private firstRefine(): boolean {
+    try {
+      if (localStorage.getItem(REFINE_NOTICE_KEY)) return false;
+      localStorage.setItem(REFINE_NOTICE_KEY, '1');
+    } catch {
+      // Storage unavailable: say it every time.
+    }
+    return true;
+  }
+
   /** Names the drawing after the doodle guess showing. */
   acceptGuess(): void {
     const guess = useStudioStore.getState().guess;
@@ -1537,6 +1624,7 @@ export class Studio {
         mainThreadP50: this.mainThreadCost.percentile(50),
         mainThreadP95: this.mainThreadCost.percentile(95),
         doodleMs: this.doodleMs,
+        refineMs: this.refineMs,
         hasCaptureTime: this.hasCaptureTime,
         tracker: this.tracker?.mode ?? null,
         delegate: this.tracker?.delegate ?? null,

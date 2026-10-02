@@ -125,6 +125,7 @@ export function Hud({ studio }: { studio: Studio }) {
         )}
         <Row label="Strokes" value={String(s.strokeCount)} />
         {stats.doodleMs !== null && <Row label="Doodle guess" value={ms(stats.doodleMs)} />}
+        {stats.refineMs !== null && <Row label="Refine round trip" value={ms(stats.refineMs)} />}
         {tracking && <Row label="Gestures" value={gestureSummary(s.gestures)} />}
       </dl>
 

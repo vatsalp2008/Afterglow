@@ -11,6 +11,7 @@ const GESTURES: ReadonlyArray<[string, string]> = [
   ['Make a fist', 'Pause or resume drawing, or close the menu'],
   ['Two fingers up, swipe left or right', 'Undo or redo'],
   ['Pinch a guess like “Looks like a cat?”', 'Name the drawing'],
+  ['Both hands: thumbs touching, index fingers up, like a frame', 'Refine the drawing'],
 ];
 
 // Keys come from the command registry where a command has one, so this list can't drift.
@@ -26,6 +27,7 @@ const KEYS: ReadonlyArray<{ keys: string; does: string; camera?: boolean }> = [
   { keys: key('snap'), does: 'Snap shapes on or off' },
   { keys: key('darkroom'), does: 'Darkroom on or off', camera: true },
   { keys: 'P', does: 'Pause or resume hand drawing', camera: true },
+  { keys: key('refine'), does: 'Refine: redraw it as clean line art' },
   { keys: key('replay'), does: 'Replay as a timelapse' },
   { keys: key('video'), does: 'Record a timelapse video' },
   { keys: key('stop'), does: 'Stop a replay or recording, or close this' },

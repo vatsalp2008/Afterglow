@@ -44,7 +44,8 @@ export function Intro({ studio }: { studio: Studio }) {
         </div>
 
         <p className={styles.privacy}>
-          Your camera feed is processed on this device and never uploaded. Works best in Chrome or Edge, in a dim room.
+          Your camera feed is processed on this device and never uploaded. Refine sends only a picture of your strokes.
+          Works best in Chrome or Edge, in a dim room.
         </p>
       </main>
     </div>
