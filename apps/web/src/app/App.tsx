@@ -4,6 +4,7 @@ import styles from './App.module.css';
 import { Dock } from './Dock';
 import { FixtureCapture } from './FixtureCapture';
 import { Hud } from './Hud';
+import { InterruptionCard } from './InterruptionCard';
 import { Intro, Unsupported } from './Intro';
 import { GesturesHelp, Hint, Toast } from './Overlay';
 import { RadialMenu } from './RadialMenu';
@@ -79,6 +80,7 @@ export function App() {
           <GesturesHelp />
           <Dock studio={studio} />
           <Hud studio={studio} />
+          <InterruptionCard studio={studio} />
           {params.get('record') === 'fixtures' && <FixtureCapture studio={studio} />}
           {params.get('record') === 'guest' && <FixtureCapture studio={studio} guest />}
           {params.get('bench') === 'tracker' && <TrackerBench studio={studio} />}

@@ -1,0 +1,38 @@
+.card {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(440px, calc(100vw - 32px));
+  padding: 22px 24px 24px;
+  z-index: 11;
+}
+
+.card h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.card p {
+  margin: 10px 0 0;
+  color: var(--fog);
+  line-height: 1.55;
+}
+
+.card .error {
+  margin-top: 16px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 79, 163, 0.35);
+  border-radius: 12px;
+  background: rgba(255, 79, 163, 0.08);
+  color: var(--paper);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}

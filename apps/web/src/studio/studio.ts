@@ -56,7 +56,7 @@ import {
 } from '@afterglow/tracking';
 import { ERASER_RADII, SIZES } from '../app/brushes';
 import { menuTree, runByGesture } from '../app/commands';
-import { showToast, useStudioStore, type StudioState } from '../app/store';
+import { showToast, useStudioStore, type StartError, type StudioState } from '../app/store';
 import { DemoPen } from './demoPen';
 import { download, downloadJson, stamp } from './download';
 import { carriesFiles, MAX_DRAWING_BYTES, OPEN_PROBLEM_COPY, pickDrawingFile } from './drawingFile';
@@ -73,6 +73,11 @@ import { BenchCollector, type BlockSummary } from './trackerBench';
 const FADE_TAU_MS = 2600;
 const INTRO_FADE_TAU_MS = 1300;
 const WASM_BASE_PATH = `${import.meta.env.BASE_URL}mediapipe`;
+/**
+ * With the camera on and the page in view, this long without a tracker frame means
+ * tracking has failed: frames arrive even with no hand in view.
+ */
+const TRACKING_STALL_MS = 4000;
 
 export interface StudioElements {
   canvas: HTMLCanvasElement;
@@ -137,6 +142,8 @@ export class Studio {
   private erasing = new Map<string, { group: string; last: Vec2 }>();
   private tracker: HandTracker | null = null;
   private stream: MediaStream | null = null;
+  private cameraTrack: MediaStreamTrack | null = null;
+  private lastTrackerFrameAt = 0;
   private videoSize = { width: 0, height: 0 };
   private frame: FrameSize = frameForAspect(16 / 9);
   private viewport: Viewport = { width: 1, height: 1 };
@@ -240,7 +247,11 @@ export class Studio {
     // Safari zooms the page on a two-finger pinch despite touch-action; painting needs both fingers.
     const stopZoom = (e: Event) => e.preventDefault();
     document.addEventListener('gesturestart', stopZoom);
-    this.disposers.push(() => document.removeEventListener('gesturestart', stopZoom));
+    document.addEventListener('visibilitychange', this.onVisibility);
+    this.disposers.push(() => {
+      document.removeEventListener('gesturestart', stopZoom);
+      document.removeEventListener('visibilitychange', this.onVisibility);
+    });
     this.disposers.push(useStudioStore.subscribe(this.onSettings));
     this.raf = requestAnimationFrame(this.tick);
   }
@@ -252,27 +263,24 @@ export class Studio {
     set({ phase: 'starting', error: null, loadingMessage: 'Waiting for camera permission' });
     try {
       this.stream ??= await openCamera(this.els.video, this.cameraOptions());
+      this.watchCamera();
     } catch (err) {
       set({ phase: 'intro', loadingMessage: null, error: err instanceof CameraError ? err.kind : 'unknown' });
       return;
     }
     set({ loadingMessage: 'Loading hand tracking (about 8 MB)' });
     try {
-      // Loaded on demand so pointer-only visitors never download MediaPipe.
-      const { createHandTracker } = await import('@afterglow/tracking/mediapipe');
-      this.tracker ??= await createHandTracker({
-        mode: trackerPreference(),
-        video: this.els.video,
-        wasmBasePath: WASM_BASE_PATH,
-      });
+      this.tracker ??= await this.createTracker();
     } catch (err) {
       console.error('[studio] hand tracker failed to load', err);
+      // Without tracking the camera is no use: turn it off rather than leave its light on.
+      this.releaseCamera();
       set({ phase: 'intro', loadingMessage: null, error: 'model' });
       return;
     }
     this.useVideoFrame();
     this.renderer.setVideo(this.els.video);
-    this.tracker.start(this.onTrackerFrame);
+    this.startTracking();
     set({ inputMode: 'camera' });
     this.enterStudio();
     void this.refreshCameras();
@@ -313,8 +321,7 @@ export class Studio {
   }
 
   startPointer(): void {
-    stopCamera(this.stream);
-    this.stream = null;
+    this.releaseCamera();
     this.frame = frameForAspect(16 / 9);
     useStudioStore.setState({ inputMode: 'pointer', error: null });
     this.enterStudio();
@@ -325,25 +332,138 @@ export class Studio {
     if (!this.stream) return;
     this.tracker?.stop();
     this.finishTrackedStrokes();
-    stopCamera(this.stream);
-    this.stream = null;
+    this.releaseCamera();
     try {
       this.stream = await openCamera(this.els.video, opts);
     } catch (err) {
       console.error('[studio] camera switch failed', err);
       showToast('That camera could not be opened');
-      this.stream = await openCamera(this.els.video, {}).catch(() => null);
+      try {
+        this.stream = await openCamera(this.els.video, {});
+      } catch {
+        this.interrupt('camera');
+        return;
+      }
     }
+    this.watchCamera();
     this.useVideoFrame();
-    this.tracker?.start(this.onTrackerFrame);
+    this.startTracking();
     void this.refreshCameras();
   }
+
+  /** After an interruption: reconnects the camera and restarts hand tracking as needed. */
+  async reconnect(): Promise<void> {
+    const current = useStudioStore.getState().interruption;
+    if (!current || current.reconnecting) return;
+    const failed = (error: StartError) =>
+      useStudioStore.setState({ interruption: { ...current, error, reconnecting: false } });
+    useStudioStore.setState({ interruption: { ...current, error: null, reconnecting: true } });
+    if (!this.stream) {
+      try {
+        this.stream = await openCamera(this.els.video, this.cameraOptions());
+      } catch (err) {
+        // The chosen camera may be the one that went away: any camera will do.
+        try {
+          if (!useStudioStore.getState().cameraId) throw err;
+          this.stream = await openCamera(this.els.video, { resolution: useStudioStore.getState().resolution });
+        } catch (fallbackErr) {
+          failed(fallbackErr instanceof CameraError ? fallbackErr.kind : 'unknown');
+          return;
+        }
+      }
+      this.watchCamera();
+      this.useVideoFrame();
+    }
+    // Nothing here pauses the video, but a browser can; frames only come while it plays.
+    if (this.els.video.paused) await this.els.video.play().catch(() => undefined);
+    if (current.kind === 'tracking' || !this.tracker) {
+      this.tracker?.close();
+      this.tracker = null;
+      try {
+        this.tracker = await this.createTracker();
+      } catch (err) {
+        console.error('[studio] hand tracker failed to restart', err);
+        failed('model');
+        return;
+      }
+    }
+    this.startTracking();
+    useStudioStore.setState({ interruption: null });
+    showToast(current.kind === 'camera' ? 'Camera reconnected' : 'Hand tracking restarted');
+    void this.refreshCameras();
+  }
+
+  /** After an interruption: carries on with the mouse or touch, keeping the drawing. */
+  continueWithoutCamera(): void {
+    this.tracker?.close();
+    this.tracker = null;
+    this.releaseCamera();
+    this.renderer.setVideo(null);
+    useStudioStore.setState({ inputMode: 'pointer', interruption: null, paused: false });
+  }
+
+  private async createTracker(): Promise<HandTracker> {
+    // Loaded on demand so pointer-only visitors never download MediaPipe.
+    const { createHandTracker } = await import('@afterglow/tracking/mediapipe');
+    return createHandTracker({ mode: trackerPreference(), video: this.els.video, wasmBasePath: WASM_BASE_PATH });
+  }
+
+  private startTracking(): void {
+    this.lastTrackerFrameAt = performance.now();
+    this.tracker?.start(this.onTrackerFrame);
+  }
+
+  /** Notices the camera ending: unplugged, its permission revoked, or taken by another app. */
+  private watchCamera(): void {
+    this.cameraTrack?.removeEventListener('ended', this.onCameraEnded);
+    this.cameraTrack = this.stream?.getVideoTracks()[0] ?? null;
+    this.cameraTrack?.addEventListener('ended', this.onCameraEnded);
+  }
+
+  private onCameraEnded = (): void => {
+    this.interrupt('camera');
+  };
+
+  private releaseCamera(): void {
+    this.cameraTrack?.removeEventListener('ended', this.onCameraEnded);
+    this.cameraTrack = null;
+    stopCamera(this.stream);
+    this.stream = null;
+  }
+
+  /** The camera or tracking stopped mid-session: end open strokes and ask what to do (ADR 0013). */
+  private interrupt(kind: 'camera' | 'tracking'): void {
+    if (useStudioStore.getState().interruption) return;
+    this.tracker?.stop();
+    this.finishTrackedStrokes();
+    if (kind === 'camera') this.releaseCamera();
+    useStudioStore.setState({ interruption: { kind, error: null, reconnecting: false } });
+  }
+
+  /** The watchdog: no tracker frames for a while, with the camera on and the page in view. */
+  private checkTracking(t: number): void {
+    if (!this.tracker || this.benchRunning || document.visibilityState !== 'visible') return;
+    const s = useStudioStore.getState();
+    if (s.inputMode !== 'camera' || s.interruption || t - this.lastTrackerFrameAt < TRACKING_STALL_MS) return;
+    // A muted track sends no video, and the video element waits without an error.
+    const track = this.cameraTrack;
+    this.interrupt(!track || track.readyState === 'ended' || track.muted ? 'camera' : 'tracking');
+  }
+
+  /** Hidden, the camera's frames stop; strokes end so coming back can't draw a jump. */
+  private onVisibility = (): void => {
+    if (document.visibilityState === 'hidden') {
+      if (this.stream) this.finishTrackedStrokes();
+    } else {
+      this.lastTrackerFrameAt = performance.now();
+    }
+  };
 
   dispose(): void {
     cancelAnimationFrame(this.raf);
     this.timelapse.stop();
     this.tracker?.close();
-    stopCamera(this.stream);
+    this.releaseCamera();
     for (const d of this.disposers) d();
     for (const el of this.cursorEls.values()) el.remove();
     this.menuPointerEl?.remove();
@@ -628,7 +748,7 @@ export class Studio {
       this.bench = null;
       this.tracker?.close();
       this.tracker = await createHandTracker({ ...opts, mode: restoreMode });
-      this.tracker.start(this.onTrackerFrame);
+      this.startTracking();
       this.benchRunning = false;
     }
   }
@@ -791,6 +911,7 @@ export class Studio {
   // ---- input ---------------------------------------------------------------
 
   private onTrackerFrame = (frame: HandFrame, timing: TrackerTiming): void => {
+    this.lastTrackerFrameAt = performance.now();
     this.trackRate.tick(timing.doneAt);
     this.landmarkLatency.push(timing.doneAt - timing.captureTime);
     this.mainThreadCost.push(timing.mainThreadMs);
@@ -1045,6 +1166,7 @@ export class Studio {
   private tick = (ts: number): void => {
     this.raf = requestAnimationFrame(this.tick);
     const startedAt = performance.now();
+    this.checkTracking(startedAt);
     // This frame starts once the last one is on screen: that completes its ink's latency.
     if (this.inkDrawn !== null) {
       this.inkLatency.push(ts - this.inkDrawn);

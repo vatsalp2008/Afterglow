@@ -7,6 +7,20 @@ import { useStudioStore } from './store';
 /** A touch screen with no mouse or trackpad: a phone or a tablet. */
 const touchFirst = () => window.matchMedia('(pointer: coarse) and (not (any-pointer: fine))').matches;
 
+/** True once `active` has held for `ms`. */
+function useHeldFor(active: boolean, ms: number): boolean {
+  const [held, setHeld] = useState(false);
+  useEffect(() => {
+    if (!active) return;
+    const t = setTimeout(() => setHeld(true), ms);
+    return () => {
+      clearTimeout(t);
+      setHeld(false);
+    };
+  }, [active, ms]);
+  return held;
+}
+
 export function Hint() {
   const s = useStudioStore(
     useShallow((st) => ({
@@ -19,13 +33,16 @@ export function Hint() {
       paused: st.paused,
       tool: st.tool,
       menuOpen: st.menu !== null,
+      interrupted: st.interruption !== null,
     })),
   );
+  // After the first stroke, the hand-raising hint comes back only once the hand has been gone a while.
+  const handGone = useHeldFor(s.inputMode === 'camera' && s.handCount === 0, 4000);
   // With hands, every hint names a gesture; the menu carries its own instructions.
   const hands = s.inputMode !== 'pointer';
   let text: string | null = null;
   const recording = s.recordingVideo || s.session !== null;
-  if (s.menuOpen) text = null;
+  if (s.menuOpen || s.interrupted) text = null;
   else if (s.session)
     text = s.session.scenario ? `Recording ${s.session.scenario}` : 'Recording session. Press R to stop.';
   else if (s.replaying)
@@ -45,6 +62,7 @@ export function Hint() {
       s.handCount === 0
         ? 'Raise a hand so the camera can see it'
         : 'Pinch to draw. Hold up an open hand, fingers spread, for the menu.';
+  else if (s.inputMode === 'camera' && handGone) text = 'Raise a hand so the camera can see it';
   else if (!s.hasDrawn) text = touchFirst() ? 'Drag a finger to paint' : 'Click and drag to paint. Press H for stats.';
   if (!text) return null;
   return (

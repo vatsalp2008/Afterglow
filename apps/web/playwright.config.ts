@@ -31,6 +31,8 @@ export default defineConfig({
     {
       name: 'camera',
       testMatch: /camera\.spec\.ts/,
+      // Each test runs MediaPipe on the GPU; side by side they starve each other of frames.
+      fullyParallel: false,
       use: {
         permissions: ['camera'],
         launchOptions: {

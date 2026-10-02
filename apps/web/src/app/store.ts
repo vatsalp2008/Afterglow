@@ -24,6 +24,14 @@ export type Phase = 'intro' | 'starting' | 'studio';
 export type InputMode = 'camera' | 'pointer' | 'fixture';
 export type StartError = CameraErrorKind | 'model' | 'fixture';
 
+/** The camera or hand tracking stopped mid-session (ADR 0013). */
+export interface Interruption {
+  kind: 'camera' | 'tracking';
+  /** Why the last try to reconnect failed. */
+  error: StartError | null;
+  reconnecting: boolean;
+}
+
 export interface HandStat {
   key: string;
   state: PenState;
@@ -69,6 +77,7 @@ export interface StudioState {
   inputMode: InputMode;
   loadingMessage: string | null;
   error: StartError | null;
+  interruption: Interruption | null;
 
   /** Drawing with the brush, or erasing what the pen passes over. */
   tool: 'draw' | 'erase';
@@ -128,6 +137,7 @@ export const useStudioStore = create<StudioState>()(() => ({
   inputMode: 'pointer',
   loadingMessage: null,
   error: null,
+  interruption: null,
 
   tool: 'draw',
   menu: null,
