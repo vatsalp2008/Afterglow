@@ -61,15 +61,18 @@ test('notices when hand tracking stops, and restarts it', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto('/');
   await expect(page.getByRole('navigation', { name: 'Tools' })).toBeVisible({ timeout: 60_000 });
+  await page.keyboard.press('h');
+  const stats = page.getByRole('complementary', { name: 'Stats' });
+  // Once frames flow: before the first one, the watchdog waits out the model's warm-up.
+  await expect(stats.getByText(/ hand$/).first()).toBeVisible({ timeout: 45_000 });
   await page.evaluate(() => document.querySelector('video')?.pause());
 
   const card = page.getByRole('alertdialog', { name: 'Hand tracking stopped' });
-  await expect(card).toBeVisible({ timeout: 15_000 });
+  // 4 s, or longer where tracking is slow (software WebGL on CI).
+  await expect(card).toBeVisible({ timeout: 45_000 });
   await card.getByRole('button', { name: 'Restart hand tracking' }).click();
   await expect(page.getByText('Hand tracking restarted')).toBeVisible({ timeout: 60_000 });
   await expect(card).toBeHidden();
-  await page.keyboard.press('h');
-  const stats = page.getByRole('complementary', { name: 'Stats' });
   await expect(stats.getByText(/ hand$/).first()).toBeVisible({ timeout: 45_000 });
   expect(errors).toEqual([]);
 });

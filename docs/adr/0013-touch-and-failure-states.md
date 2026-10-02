@@ -26,11 +26,18 @@ The brief's Phase 4 asks for a touch fallback, reduced motion, a dwell mode, and
    - **Reconnect camera** tries the same camera, then any;
    - **Keep painting without the camera** switches to pointer mode, keeping the drawing.
 
-3. **A watchdog notices tracking stopping.**
-   - With the camera on and the page in view, no tracker frame for 4 s means tracking has failed, since frames arrive even with no hand in view. That covers a crashed worker, inference that keeps failing, and a frozen video, without changing the `HandTracker` interface.
+3. **A watchdog notices tracking stopping** (`apps/web/src/studio/trackingWatchdog.ts`).
+   - With the camera on and the page in view, frames arrive even with no hand in view, so a long silence means tracking has failed. That covers a crashed worker, inference that keeps failing, and a frozen video, without changing the `HandTracker` interface.
+   - **Slow machines must not look stopped:**
+     - the first frame gets 30 s, since the model warms up slowly without a GPU;
+     - after that, the limit is 4 s, or ten typical gaps between frames if those are longer;
+     - time the page itself didn't render (more than 1 s between frames) doesn't count.
+
+     The first version allowed 4 s from the start. On CI's software WebGL, rendering at 3 to 4 fps, that called tracking stopped before the first frame arrived.
+
    - If the camera track has ended or is muted, the card is about the camera. Otherwise it's "Hand tracking stopped", with **Restart hand tracking**, which creates a new tracker.
    - It's off while the tracker benchmark swaps trackers.
-   - **Hidden pages:** hiding the page ends open hand strokes, so coming back can't draw a line across the gap, and the watchdog's clock restarts when the page is visible again.
+   - **Hidden pages:** hiding the page ends open hand strokes, so coming back can't draw a line across the gap, and the watchdog starts over when the page is visible again.
 
 4. **Permission states are told apart.**
    - A closed prompt and a block both fail with `NotAllowedError`. The permission's state separates them: it's still "prompt" after the prompt is closed.
@@ -59,6 +66,7 @@ End-to-end tests against the production build:
   - Reconnect brings tracking back;
   - carrying on without the camera paints with the mouse;
   - pausing the video trips the watchdog, and Restart brings tracking back.
+- **Unit tests** of the watchdog: the first-frame wait, a stop once frames flow, slow tracking (a frame every 1.5 s), a stalled page, and the page coming back into view.
 - **Permissions:** a blocked camera and a closed prompt each get their own message.
 - **Keyboard:** the studio runs from the keyboard, the Help card included, along with the save list (arrows and Esc) and Cmd/Ctrl S.
 
@@ -70,5 +78,5 @@ End-to-end tests against the production build:
 
 ## Consequences
 
-- **Watchdog false alarms:** a machine too loaded to track one frame in 4 s gets the card, and restarting is harmless. That happened with three camera tests side by side, so the camera tests now run one at a time.
+- **Watchdog false alarms:** a machine that stops delivering frames for longer than its own pace allows still gets the card, and restarting is harmless. Three camera tests side by side starved each other that way, so the camera tests now run one at a time.
 - **Pressure:** touch doesn't set pressure, since most touch screens report a constant. Only a stylus does.

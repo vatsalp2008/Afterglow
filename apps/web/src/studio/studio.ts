@@ -67,17 +67,13 @@ import { SessionCapture } from './sessionCapture';
 import { stressCount, stressStrokes } from './stress';
 import { percentile, RateCounter, RollingStats } from './telemetry';
 import { TimelapseRecorder } from './timelapseRecorder';
+import { TrackingWatchdog } from './trackingWatchdog';
 import { median, summarizeScene, type FrameSamples, type RenderBenchResult } from './renderBench';
 import { BenchCollector, type BlockSummary } from './trackerBench';
 
 const FADE_TAU_MS = 2600;
 const INTRO_FADE_TAU_MS = 1300;
 const WASM_BASE_PATH = `${import.meta.env.BASE_URL}mediapipe`;
-/**
- * With the camera on and the page in view, this long without a tracker frame means
- * tracking has failed: frames arrive even with no hand in view.
- */
-const TRACKING_STALL_MS = 4000;
 
 export interface StudioElements {
   canvas: HTMLCanvasElement;
@@ -159,7 +155,7 @@ export class Studio {
   private tracker: HandTracker | null = null;
   private stream: MediaStream | null = null;
   private cameraTrack: MediaStreamTrack | null = null;
-  private lastTrackerFrameAt = 0;
+  private watchdog = new TrackingWatchdog();
   private videoSize = { width: 0, height: 0 };
   private frame: FrameSize = frameForAspect(16 / 9);
   private viewport: Viewport = { width: 1, height: 1 };
@@ -425,7 +421,7 @@ export class Studio {
   }
 
   private startTracking(): void {
-    this.lastTrackerFrameAt = performance.now();
+    this.watchdog.start(performance.now());
     this.tracker?.start(this.onTrackerFrame);
   }
 
@@ -460,7 +456,7 @@ export class Studio {
   private checkTracking(t: number): void {
     if (!this.tracker || this.benchRunning || document.visibilityState !== 'visible') return;
     const s = useStudioStore.getState();
-    if (s.inputMode !== 'camera' || s.interruption || t - this.lastTrackerFrameAt < TRACKING_STALL_MS) return;
+    if (s.inputMode !== 'camera' || s.interruption || !this.watchdog.stalled(t)) return;
     // A muted track sends no video, and the video element waits without an error.
     const track = this.cameraTrack;
     this.interrupt(!track || track.readyState === 'ended' || track.muted ? 'camera' : 'tracking');
@@ -471,7 +467,7 @@ export class Studio {
     if (document.visibilityState === 'hidden') {
       if (this.stream) this.finishTrackedStrokes();
     } else {
-      this.lastTrackerFrameAt = performance.now();
+      this.watchdog.resume(performance.now());
     }
   };
 
@@ -927,7 +923,7 @@ export class Studio {
   // ---- input ---------------------------------------------------------------
 
   private onTrackerFrame = (frame: HandFrame, timing: TrackerTiming): void => {
-    this.lastTrackerFrameAt = performance.now();
+    this.watchdog.frame(performance.now());
     this.trackRate.tick(timing.doneAt);
     this.landmarkLatency.push(timing.doneAt - timing.captureTime);
     this.mainThreadCost.push(timing.mainThreadMs);
