@@ -8,6 +8,11 @@ test-results
 *.log
 .DS_Store
 
+# Secrets: API keys live in .env files, never in the repository
+.env
+.env.*
+!.env.example
+
 # Served copies of the MediaPipe WASM runtime (copied from node_modules)
 apps/web/public/mediapipe
 prototype/public/mediapipe

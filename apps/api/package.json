@@ -4,11 +4,16 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "node --watch --env-file-if-exists=.env src/main.ts",
+    "start": "node --env-file-if-exists=.env src/main.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "smoke:refine": "node --env-file-if-exists=.env scripts/smoke-refine.ts"
   },
   "dependencies": {
-    "hono": "catalog:"
+    "@afterglow/core": "workspace:*",
+    "hono": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",

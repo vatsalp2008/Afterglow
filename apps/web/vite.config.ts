@@ -13,8 +13,16 @@ function watchFixtures(): Plugin {
   };
 }
 
+// Development and preview send /api to the local API (apps/api on port 8787), so the
+// studio and the API share an origin and no key or CORS setup reaches the browser.
+const apiProxy = {
+  '/api': { target: 'http://127.0.0.1:8787', rewrite: (path: string) => path.replace(/^\/api/, '') },
+};
+
 export default defineConfig({
   plugins: [react(), watchFixtures()],
+  server: { proxy: apiProxy },
+  preview: { proxy: apiProxy },
   // MediaPipe's loader code-splits with import(), which classic (iife) workers can't do.
   worker: { format: 'es' },
   build: {
