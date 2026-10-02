@@ -59,36 +59,3 @@
     transition: none;
   }
 }
-
-.help {
-  position: fixed;
-  top: 64px;
-  right: 20px;
-  width: 300px;
-  padding: 14px 16px;
-  font-size: 13px;
-  z-index: 9;
-  pointer-events: none;
-}
-
-.help h2 {
-  margin: 0 0 8px;
-  font-family: var(--font-display);
-  font-size: 17px;
-  font-weight: 500;
-}
-
-.help dl {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-}
-
-.help dt {
-  color: var(--paper);
-}
-
-.help dd {
-  margin: 0;
-  color: var(--fog);
-}

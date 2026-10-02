@@ -1410,7 +1410,25 @@ export class Studio {
     if (s.filter !== prev.filter) this.filter.setSpec(s.filter);
     if (s.pinch !== prev.pinch) this.pinch.config = s.pinch;
     if (s.showSkeleton !== prev.showSkeleton || s.debugView !== prev.debugView) this.overlayDirty = true;
+    if (s.reducedMotion !== prev.reducedMotion) this.setReducedMotion(s.reducedMotion);
   };
+
+  /** Follows the system's reduced-motion setting as it changes. */
+  private setReducedMotion(reduced: boolean): void {
+    this.reducedMotion = reduced;
+    this.renderer.setGrain(1, !reduced);
+    if (reduced) this.renderer.sparks.clear();
+    if (this.mode !== 'intro') return;
+    // The intro's demo pen animates; with reduced motion it's a still drawing instead.
+    this.demo = null;
+    this.demoBuilder.finishAll();
+    this.demoStrokes = [];
+    this.renderer.setLive([]);
+    this.renderer.setStrokes([]);
+    this.renderer.setFadeTau(this.currentFadeTau());
+    if (reduced) this.drawStaticDemo();
+    else this.demo = new DemoPen(this.now() + 500);
+  }
 
   private currentFadeTau(): number {
     if (this.mode === 'intro') return this.reducedMotion ? 0 : INTRO_FADE_TAU_MS;

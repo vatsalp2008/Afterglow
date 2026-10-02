@@ -95,36 +95,3 @@ export function Toast() {
     </div>
   );
 }
-
-const GESTURES: ReadonlyArray<[string, string]> = [
-  ['Pinch thumb and index finger', 'Draw, or erase with the eraser picked'],
-  ['Hold up an open hand, fingers spread', 'Open the menu'],
-  ['In the menu, point your palm at an item and pinch', 'Choose it'],
-  ['Make a fist', 'Pause or resume drawing, or close the menu'],
-  ['Two fingers up, swipe left or right', 'Undo or redo'],
-];
-
-/** The gestures, shown the first time the camera is used and from the menu (More, Gestures). */
-export function GesturesHelp() {
-  const open = useStudioStore((s) => s.helpOpen);
-  useEffect(() => {
-    if (!open) return;
-    // Hands can't click it away: it leaves on its own, or when the menu opens.
-    const t = setTimeout(() => useStudioStore.setState({ helpOpen: false }), 15_000);
-    return () => clearTimeout(t);
-  }, [open]);
-  if (!open) return null;
-  return (
-    <Panel as="section" className={styles.help} aria-label="Gestures">
-      <h2>Gestures</h2>
-      <dl>
-        {GESTURES.map(([gesture, effect]) => (
-          <div key={gesture}>
-            <dt>{gesture}</dt>
-            <dd>{effect}</dd>
-          </div>
-        ))}
-      </dl>
-    </Panel>
-  );
-}

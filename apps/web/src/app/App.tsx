@@ -6,7 +6,8 @@ import { FixtureCapture } from './FixtureCapture';
 import { Hud } from './Hud';
 import { InterruptionCard } from './InterruptionCard';
 import { Intro, Unsupported } from './Intro';
-import { GesturesHelp, Hint, Toast } from './Overlay';
+import { Help } from './Help';
+import { Hint, Toast } from './Overlay';
 import { RadialMenu } from './RadialMenu';
 import { useShortcuts } from './shortcuts';
 import { useStudioStore } from './store';
@@ -77,7 +78,7 @@ export function App() {
         <>
           <Hint />
           <RadialMenu />
-          <GesturesHelp />
+          <Help />
           <Dock studio={studio} />
           <Hud studio={studio} />
           <InterruptionCard studio={studio} />

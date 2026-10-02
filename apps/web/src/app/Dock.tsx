@@ -1,4 +1,4 @@
-import { BRUSH_COLORS, ClearIcon, IconButton, Panel, StatsIcon } from '@afterglow/ui';
+import { BRUSH_COLORS, ClearIcon, HelpIcon, IconButton, Panel, StatsIcon } from '@afterglow/ui';
 import { useEffect, useState, type CSSProperties } from 'react';
 import type { Studio } from '../studio/studio';
 import { SIZES, type SizeId } from './brushes';
@@ -137,6 +137,9 @@ export function Dock({ studio }: { studio: Studio }) {
         <SaveMenu studio={studio} s={s} />
       </div>
       <Divider />
+      <IconButton label="Help (?)" pressed={s.helpOpen} onClick={() => set({ helpOpen: !s.helpOpen })}>
+        <HelpIcon />
+      </IconButton>
       <IconButton label="Stats (H)" pressed={s.hudOpen} onClick={() => set({ hudOpen: !s.hudOpen })}>
         <StatsIcon />
       </IconButton>

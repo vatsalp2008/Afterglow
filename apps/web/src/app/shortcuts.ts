@@ -116,8 +116,12 @@ export function useShortcuts(studio: Studio | null): void {
           e.preventDefault();
           studio.requestClear();
           break;
+        case '?':
+          set({ helpOpen: !s.helpOpen });
+          break;
         case 'escape':
-          run('stop');
+          if (s.helpOpen) set({ helpOpen: false });
+          else run('stop');
           break;
       }
     };

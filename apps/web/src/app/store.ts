@@ -71,7 +71,8 @@ export interface BenchState {
   error?: string;
 }
 
-const reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const reducedMotionQuery = typeof window !== 'undefined' ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+const reducedMotion = reducedMotionQuery?.matches ?? false;
 
 export interface StudioState {
   phase: Phase;
@@ -203,3 +204,6 @@ export function showToast(text: string): void {
   toastId += 1;
   useStudioStore.setState({ toast: { id: toastId, text } });
 }
+
+// Follows the system setting as it changes, not only at load.
+reducedMotionQuery?.addEventListener('change', (e) => useStudioStore.setState({ reducedMotion: e.matches }));

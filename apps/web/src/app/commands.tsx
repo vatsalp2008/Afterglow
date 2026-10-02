@@ -210,7 +210,7 @@ const list: Command[] = [
   },
   {
     id: 'help',
-    label: () => 'Gestures',
+    label: () => 'Help',
     icon: () => <HelpIcon />,
     run: () => set({ helpOpen: true }),
     done: () => '',
