@@ -93,6 +93,9 @@ export function useShortcuts(studio: Studio | null): void {
         case 'g':
           run('snap');
           break;
+        case 'y':
+          studio.acceptGuess();
+          break;
         case 'd':
           run('darkroom');
           break;

@@ -9,6 +9,8 @@ import {
   canvasToView,
   coverFit,
   frameForAspect,
+  groupKey,
+  groupSettled,
   HAND_CONNECTIONS,
   HandIdentity,
   History,
@@ -19,6 +21,7 @@ import {
   toDrawing,
   toLabeledSet,
   landmarkToView,
+  latestGroup,
   penSample,
   PinchTracker,
   sampleTimeline,
@@ -63,7 +66,8 @@ import { ERASER_RADII, SIZES } from '../app/brushes';
 import { menuTree, runByGesture } from '../app/commands';
 import { showToast, useStudioStore, type StartError, type StudioState } from '../app/store';
 import { DemoPen } from './demoPen';
-import { download, downloadJson, stamp } from './download';
+import { DoodleModel } from './doodleModel';
+import { download, downloadJson, fileName, stamp } from './download';
 import { carriesFiles, MAX_DRAWING_BYTES, OPEN_PROBLEM_COPY, pickDrawingFile } from './drawingFile';
 import { loadFixture } from './fixtures';
 import { isPointerKey, POINTER_KEY, pointerKey } from './pointerKeys';
@@ -100,6 +104,11 @@ interface Replay {
 }
 
 const newId = () => crypto.randomUUID();
+
+/** A doodle guess shows when the model gives it at least this probability. */
+const MIN_GUESS = 0.55;
+/** A pinch this close to the guess (screen px) accepts it. */
+const GUESS_HIT_PX = 80;
 
 const SHAPE_NAMES: Record<ShapeKind, string> = {
   line: 'a line',
@@ -193,6 +202,13 @@ export class Studio {
   private clearArmedUntil = 0;
   /** The first snap of a session says what happened and how to undo it. */
   private snapExplained = false;
+  /** The doodle model, loaded on first use, and the last group it looked at (ADR 0015). */
+  private doodle = new DoodleModel();
+  private guessedGroup = '';
+  private doodleMs: number | null = null;
+  private doodleFailed = false;
+  /** Hands whose pinch accepted a guess: that pinch draws nothing. */
+  private swallowed = new Set<string>();
   /** Pointers drawing right now, by pointer id, and the pen each drives. */
   private activePointers = new Map<number, string>();
 
@@ -553,6 +569,13 @@ export class Studio {
   clear(): void {
     if (this.replay || this.history.strokes.length === 0) return;
     this.history.clear();
+    this.forgetName();
+  }
+
+  /** A cleared canvas is a new drawing: no name, no guess. */
+  private forgetName(): void {
+    this.guessedGroup = '';
+    useStudioStore.setState({ drawingName: null, guess: null });
   }
 
   /** Pauses or resumes drawing with the hands; the pointer still draws. */
@@ -572,6 +595,7 @@ export class Studio {
     if (t < this.clearArmedUntil) {
       this.clearArmedUntil = 0;
       this.history.clear();
+      this.forgetName();
       showToast('Canvas cleared. Undo brings it back.');
     } else {
       this.clearArmedUntil = t + 2500;
@@ -592,7 +616,7 @@ export class Studio {
     this.renderer.setVideoOpacity(this.replay ? 0 : 1);
     this.renderer.setFadeTau(this.currentFadeTau());
     try {
-      download(await pending, `afterglow-${stamp()}.png`);
+      download(await pending, fileName('png', useStudioStore.getState().drawingName));
       showToast('Long exposure saved');
     } catch {
       showToast('Could not save the image');
@@ -606,7 +630,7 @@ export class Studio {
       return;
     }
     const svg = strokesToSvg(this.history.strokes, visibleCanvasRect(this.frame, this.viewport));
-    download(new Blob([svg], { type: 'image/svg+xml' }), `afterglow-${stamp()}.svg`);
+    download(new Blob([svg], { type: 'image/svg+xml' }), fileName('svg', useStudioStore.getState().drawingName));
     showToast('Vector image saved');
   }
 
@@ -616,7 +640,8 @@ export class Studio {
       showToast('Nothing to save yet. Draw something first.');
       return;
     }
-    downloadJson(toDrawing(this.history.strokes, this.frame), `afterglow-${stamp()}.json`);
+    const name = useStudioStore.getState().drawingName;
+    downloadJson(toDrawing(this.history.strokes, this.frame, name ?? undefined), fileName('json', name));
     showToast('Drawing file saved');
   }
 
@@ -652,6 +677,8 @@ export class Studio {
     for (const s of this.builder.finishAll()) this.history.add(s);
     const replaced = this.history.strokes.length > 0;
     this.history.replace(this.history.strokes, strokes);
+    this.guessedGroup = '';
+    useStudioStore.setState({ drawingName: parsed.drawing.title ?? null, guess: null });
     const count = `${String(strokes.length)} ${strokes.length === 1 ? 'stroke' : 'strokes'}`;
     showToast(`Opened a drawing with ${count}.${replaced ? ' Undo brings back the one before.' : ''}`);
   }
@@ -668,7 +695,9 @@ export class Studio {
     this.renderer.setStrokes([]);
     this.renderer.sparks.clear();
     this.renderer.setVideoOpacity(0);
-    if (record && !this.timelapse.start()) showToast('Video recording is not supported in this browser');
+    if (record && !this.timelapse.start(useStudioStore.getState().drawingName)) {
+      showToast('Video recording is not supported in this browser');
+    }
     useStudioStore.setState({ replaying: true, recordingVideo: this.timelapse.active });
   }
 
@@ -1032,6 +1061,11 @@ export class Studio {
       }
       if (this.replay || this.mode !== 'studio') continue;
       if (paused && !isPointerKey(ev.handKey)) continue;
+      if (this.swallowed.has(ev.handKey)) {
+        if (ev.type === 'strokeEnd') this.swallowed.delete(ev.handKey);
+        continue;
+      }
+      if (ev.type === 'strokeStart' && this.takeGuess(ev.handKey, ev.p)) continue;
       // The tool is fixed for a whole stroke: switching mid-stroke takes effect on the next one.
       const erasing =
         ev.type === 'strokeStart' ? useStudioStore.getState().tool === 'erase' : this.erasing.has(ev.handKey);
@@ -1139,6 +1173,80 @@ export class Studio {
    * Swaps a finished stroke for the clean shape it looks like (ADR 0014), as its own
    * undo step: undo brings back the stroke as drawn.
    */
+  /** Names the drawing after the doodle guess showing. */
+  acceptGuess(): void {
+    const guess = useStudioStore.getState().guess;
+    if (!guess) return;
+    useStudioStore.setState({ drawingName: guess.label, guess: null });
+    showToast(`Named it “${guess.label}”`);
+  }
+
+  /**
+   * Once the latest group of strokes settles, asks the doodle model what it is (ADR 0015),
+   * once per group, while the drawing has no name yet.
+   */
+  private checkDoodle(now: number): void {
+    if (this.mode !== 'studio' || this.doodleFailed) return;
+    const s = useStudioStore.getState();
+    if (s.capturing || s.menu || s.interruption || s.guess || s.drawingName) return;
+    if (this.builder.activeStrokes().length > 0 || this.erasing.size > 0) return;
+    const group = latestGroup(this.history.strokes);
+    const key = groupKey(group);
+    if (!key || key === this.guessedGroup || !groupSettled(group, now)) return;
+    this.guessedGroup = key;
+    this.doodle.guess(group.map((st) => st.points)).then(
+      (g) => {
+        this.doodleMs = g.ms;
+        // The canvas may have changed while the model loaded or ran.
+        if (g.probability < MIN_GUESS || groupKey(latestGroup(this.history.strokes)) !== key) return;
+        if (useStudioStore.getState().drawingName) return;
+        useStudioStore.setState({ guess: { label: g.label, ...this.guessSpot(group) } });
+      },
+      (err: unknown) => {
+        this.doodleFailed = true;
+        console.error('[studio] the doodle model failed', err);
+      },
+    );
+  }
+
+  /** Above the middle of the group's strokes, on screen. */
+  private guessSpot(group: readonly Stroke[]): { x: number; y: number } {
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    for (const st of group) {
+      for (const p of st.points) {
+        minX = Math.min(minX, p.x);
+        maxX = Math.max(maxX, p.x);
+        minY = Math.min(minY, p.y);
+      }
+    }
+    const top = canvasToScreen({ x: (minX + maxX) / 2, y: minY }, this.fit);
+    return {
+      x: Math.min(this.viewport.width - 120, Math.max(120, top.x)),
+      y: Math.min(this.viewport.height - 140, Math.max(72, top.y - 36)),
+    };
+  }
+
+  /**
+   * A pinch on the guess accepts it, and draws nothing until it lets go. Any other new
+   * stroke dismisses the guess.
+   */
+  private takeGuess(handKey: string, p: PenSample): boolean {
+    const guess = useStudioStore.getState().guess;
+    if (!guess) return false;
+    if (!isPointerKey(handKey)) {
+      const at = canvasToScreen(viewToCanvas(p, this.frame), this.fit);
+      if (Math.hypot(at.x - guess.x, at.y - guess.y) <= GUESS_HIT_PX) {
+        this.acceptGuess();
+        this.swallowed.add(handKey);
+        return true;
+      }
+    }
+    useStudioStore.setState({ guess: null });
+    return false;
+  }
+
   private snap(stroke: Stroke): void {
     if (!useStudioStore.getState().snap) return;
     const snapped = snapStroke(stroke, newId);
@@ -1261,6 +1369,7 @@ export class Studio {
         this.liveDirty = false;
         this.renderer.setLive(this.mode === 'intro' ? this.demoBuilder.activeStrokes() : this.builder.activeStrokes());
       }
+      this.checkDoodle(now);
     }
 
     this.renderer.render(fadeNow, dt);
@@ -1427,6 +1536,7 @@ export class Studio {
         ...renderStats(this.renderer.stats()),
         mainThreadP50: this.mainThreadCost.percentile(50),
         mainThreadP95: this.mainThreadCost.percentile(95),
+        doodleMs: this.doodleMs,
         hasCaptureTime: this.hasCaptureTime,
         tracker: this.tracker?.mode ?? null,
         delegate: this.tracker?.delegate ?? null,

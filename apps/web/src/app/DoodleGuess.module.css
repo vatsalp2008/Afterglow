@@ -1,0 +1,35 @@
+.guess {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(20, 26, 51, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--paper);
+  font: inherit;
+  font-size: 15px;
+  white-space: nowrap;
+  cursor: pointer;
+  z-index: 7;
+  animation: guess-in 420ms ease-out;
+}
+
+.guess:hover,
+.guess:focus-visible {
+  border-color: var(--fog);
+}
+
+@keyframes guess-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% + 6px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guess {
+    animation: none;
+  }
+}

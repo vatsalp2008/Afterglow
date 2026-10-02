@@ -57,6 +57,8 @@ export interface Stats {
   geometries: number;
   mainThreadP50: number | null;
   mainThreadP95: number | null;
+  /** The last doodle guess: rasterizing and running the model, ms. */
+  doodleMs: number | null;
   hasCaptureTime: boolean;
   tracker: TrackerMode | null;
   delegate: TrackerDelegate | null;
@@ -122,6 +124,10 @@ export interface StudioState {
   canRedo: boolean;
   drawing: boolean;
   hasDrawn: boolean;
+  /** What the drawing is, once named: an accepted doodle guess, a refined title, or an opened file's. */
+  drawingName: string | null;
+  /** The doodle model's guess, while it's showing, and where (screen px, above the strokes). */
+  guess: { label: string; x: number; y: number } | null;
   /** Hand drawing is paused (a fist, or P); the pointer still draws. */
   paused: boolean;
   /** How many times each tool gesture was recognized this session. */
@@ -182,6 +188,7 @@ export const useStudioStore = create<StudioState>()(() => ({
     geometries: 0,
     mainThreadP50: null,
     mainThreadP95: null,
+    doodleMs: null,
     hasCaptureTime: false,
     tracker: null,
     delegate: null,
@@ -193,6 +200,8 @@ export const useStudioStore = create<StudioState>()(() => ({
   canUndo: false,
   canRedo: false,
   drawing: false,
+  drawingName: null,
+  guess: null,
   hasDrawn: false,
   paused: false,
   gestures: {},

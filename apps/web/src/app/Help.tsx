@@ -10,6 +10,7 @@ const GESTURES: ReadonlyArray<[string, string]> = [
   ['In the menu, point your palm at an item and pinch', 'Choose it'],
   ['Make a fist', 'Pause or resume drawing, or close the menu'],
   ['Two fingers up, swipe left or right', 'Undo or redo'],
+  ['Pinch a guess like “Looks like a cat?”', 'Name the drawing'],
 ];
 
 // Keys come from the command registry where a command has one, so this list can't drift.
@@ -32,6 +33,7 @@ const KEYS: ReadonlyArray<{ keys: string; does: string; camera?: boolean }> = [
   { keys: key('svg'), does: 'Save vector image' },
   { keys: key('drawing:save'), does: 'Save drawing file' },
   { keys: key('drawing:open'), does: 'Open a drawing file' },
+  { keys: 'Y', does: 'Accept the doodle guess, naming the drawing' },
   { keys: 'H', does: 'Stats' },
   { keys: '?', does: 'This help' },
 ];

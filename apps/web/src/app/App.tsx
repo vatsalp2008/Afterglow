@@ -7,6 +7,7 @@ import { Hud } from './Hud';
 import { InterruptionCard } from './InterruptionCard';
 import { Intro, Unsupported } from './Intro';
 import { LabeledCapture } from './LabeledCapture';
+import { DoodleGuess } from './DoodleGuess';
 import { Help } from './Help';
 import { Hint, Toast } from './Overlay';
 import { RadialMenu } from './RadialMenu';
@@ -83,6 +84,7 @@ export function App() {
           <Dock studio={studio} />
           <Hud studio={studio} />
           <InterruptionCard studio={studio} />
+          <DoodleGuess studio={studio} />
           {params.get('record') === 'fixtures' && <FixtureCapture studio={studio} />}
           {params.get('record') === 'guest' && <FixtureCapture studio={studio} guest />}
           {params.get('record') === 'shapes' && <LabeledCapture studio={studio} kind="shapes" />}

@@ -3,6 +3,11 @@ packages:
   - packages/*
   - fixtures
 
+# Install scripts that may run. protobufjs (through onnxruntime-web) only checks
+# version schemes after installing; nothing needs it.
+allowBuilds:
+  protobufjs: false
+
 # Exact versions shared by every package. Reference them with "catalog:".
 catalog:
   '@mediapipe/tasks-vision': 1.0.1
@@ -14,6 +19,7 @@ catalog:
   '@vitejs/plugin-react': 6.1.1
   '@vitest/coverage-v8': 5.0.2
   hono: 4.13.9
+  onnxruntime-web: 1.30.0
   react: 19.3.0
   react-dom: 19.3.0
   three: 0.186.1

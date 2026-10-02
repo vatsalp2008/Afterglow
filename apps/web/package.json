@@ -19,6 +19,7 @@
     "@afterglow/tracking": "workspace:*",
     "@afterglow/ui": "workspace:*",
     "@mediapipe/tasks-vision": "catalog:",
+    "onnxruntime-web": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "zustand": "catalog:"

@@ -23,3 +23,18 @@ export function stamp(date = new Date()): string {
     two(date.getSeconds()),
   ].join('-');
 }
+
+/** A name made safe for a file name: "smiley face" becomes "smiley-face". */
+export function slug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+}
+
+/** afterglow[-kind][-name]-<stamp>.<ext>, e.g. afterglow-cat-2026-10-01-20-45-00.png. */
+export function fileName(ext: string, name: string | null = null, kind: string | null = null): string {
+  const parts = ['afterglow', kind, name ? slug(name) : null, stamp()].filter((p): p is string => !!p);
+  return `${parts.join('-')}.${ext}`;
+}

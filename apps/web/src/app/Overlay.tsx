@@ -35,6 +35,7 @@ export function Hint() {
       menuOpen: st.menu !== null,
       interrupted: st.interruption !== null,
       capturing: st.capturing !== null,
+      name: st.drawingName,
     })),
   );
   // After the first stroke, the hand-raising hint comes back only once the hand has been gone a while.
@@ -46,13 +47,14 @@ export function Hint() {
   if (s.menuOpen || s.interrupted || s.capturing) text = null;
   else if (s.session)
     text = s.session.scenario ? `Recording ${s.session.scenario}` : 'Recording session. Press R to stop.';
-  else if (s.replaying)
+  else if (s.replaying) {
+    const what = s.name ?? 'your session';
     text = s.recordingVideo
-      ? 'Recording your timelapse'
+      ? `Recording ${s.name ?? 'your'} timelapse`
       : hands
-        ? 'Replaying your session. Open the menu to stop.'
-        : 'Replaying your session. Press Esc to stop.';
-  else if (s.paused && hands) text = 'Hand drawing paused. Make a fist to resume.';
+        ? `Replaying ${what}. Open the menu to stop.`
+        : `Replaying ${what}. Press Esc to stop.`;
+  } else if (s.paused && hands) text = 'Hand drawing paused. Make a fist to resume.';
   else if (s.tool === 'erase')
     text = hands
       ? 'Eraser: pinch and move over lines to erase them. Pick a brush in the menu to draw.'

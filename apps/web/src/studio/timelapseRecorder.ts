@@ -1,6 +1,6 @@
 // Records the canvas while a timelapse replays, then downloads the video.
 
-import { download, stamp } from './download';
+import { download, fileName } from './download';
 
 const MIME_TYPES = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
 
@@ -16,8 +16,8 @@ export class TimelapseRecorder {
     return this.recorder !== null;
   }
 
-  /** Returns false if this browser can't record the canvas. */
-  start(): boolean {
+  /** Returns false if this browser can't record the canvas. `name` names the file. */
+  start(name: string | null = null): boolean {
     const mimeType =
       typeof MediaRecorder === 'undefined' ? undefined : MIME_TYPES.find((t) => MediaRecorder.isTypeSupported(t));
     if (!mimeType || typeof this.canvas.captureStream !== 'function') return false;
@@ -30,7 +30,7 @@ export class TimelapseRecorder {
     rec.onstop = () => {
       for (const t of stream.getTracks()) t.stop();
       const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
-      download(new Blob(chunks, { type: mimeType }), `afterglow-timelapse-${stamp()}.${ext}`);
+      download(new Blob(chunks, { type: mimeType }), fileName(ext, name, 'timelapse'));
       this.onSaved();
     };
     rec.start(250);
