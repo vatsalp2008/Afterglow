@@ -110,7 +110,8 @@ test('explains a file that is not a drawing, and opens one dropped on the page',
     }
   }, JSON.stringify(drawing));
   await expect(page.getByText('Opened a drawing with 1 stroke.')).toBeVisible();
-  await expect(strokeCount(page)).toHaveText('1');
+  // The page's first neon stroke compiles its shaders, which stalls software WebGL (CI) for seconds.
+  await expect(strokeCount(page)).toHaveText('1', { timeout: 20_000 });
   await expect(page).toHaveURL(/127\.0\.0\.1/);
   expect(errors).toEqual([]);
 });

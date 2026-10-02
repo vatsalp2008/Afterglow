@@ -26,8 +26,8 @@ test('explains a camera failure and offers a way forward', async ({ page }) => {
   await page.goto('/');
   // No camera permission is granted in this context, so the request fails.
   await page.getByRole('button', { name: 'Start painting' }).click();
-  // Headless Chrome blocks the camera without asking.
-  await expect(page.getByRole('alert')).toHaveText(/Camera access is blocked for this site/);
+  // Headless Chrome refuses without asking: blocked where there's a camera, not found on CI machines without one.
+  await expect(page.getByRole('alert')).toHaveText(/Camera access is blocked for this site|No camera was found/);
   await expect(page.getByRole('button', { name: 'Try again' })).toBeEnabled();
   await expect(page.getByRole('button', { name: 'Paint without the camera' })).toBeEnabled();
 });
