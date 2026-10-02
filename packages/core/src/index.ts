@@ -32,3 +32,5 @@ export * from './eval/labeled.ts';
 export * from './eval/shapes.ts';
 export * from './doodle/raster.ts';
 export * from './doodle/group.ts';
+export * from './refine/svgPath.ts';
+export * from './refine/refine.ts';
