@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkAnswer } from './refine.ts';
+import { checkAnswer, RefineError, refineSketch, type RefineModel } from './refine.ts';
 
 describe('checkAnswer', () => {
   it('accepts a title and up to 40 valid paths', () => {
@@ -17,5 +17,23 @@ describe('checkAnswer', () => {
     ['a list', [{ d: 'M0 0 L1 1' }]],
   ])('rejects %s', (_, answer) => {
     expect(checkAnswer(answer)).toBeNull();
+  });
+});
+
+describe('refineSketch', () => {
+  it('abandons a stuck attempt and asks again', async () => {
+    let calls = 0;
+    const model: RefineModel = {
+      name: 'stuck once',
+      refine: (_, signal) => {
+        calls++;
+        if (calls > 1) return Promise.resolve({ title: 'a sun', paths: [{ d: 'M0 0 L10 10' }] });
+        return new Promise((_resolve, reject) =>
+          signal.addEventListener('abort', () => reject(new RefineError('timeout', 'stuck'))),
+        );
+      },
+    };
+    const { attempts } = await refineSketch(model, new Uint8Array(), new AbortController().signal, 20);
+    expect(attempts).toBe(2);
   });
 });

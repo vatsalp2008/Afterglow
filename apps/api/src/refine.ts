@@ -80,17 +80,33 @@ export function checkAnswer(answer: unknown): RefineResult | null {
 }
 
 /**
- * Asks the model, and asks once more if its answer doesn't check out. Errors from the
- * model itself (rate limits, timeouts) aren't retried: retrying wouldn't help.
+ * One attempt gets this long. Answers usually take about 2 s; one that hasn't come by now
+ * is usually stuck in an overloaded queue, and a fresh request does better (ADR 0016).
+ */
+export const ATTEMPT_TIMEOUT_MS = 12_000;
+
+/**
+ * Asks the model, and asks once more if its answer doesn't check out, it times out, or
+ * it's overloaded: two attempts in all, within `signal`'s time. Rate limits and a refused
+ * key aren't retried: retrying wouldn't help.
  */
 export async function refineSketch(
   model: RefineModel,
   png: Uint8Array,
   signal: AbortSignal,
+  attemptMs = ATTEMPT_TIMEOUT_MS,
 ): Promise<{ result: RefineResult; attempts: number }> {
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    const result = checkAnswer(await model.refine(png, signal));
-    if (result) return { result, attempts: attempt };
+  let last: RefineError | null = null;
+  for (let attempt = 1; attempt <= 2 && !signal.aborted; attempt++) {
+    try {
+      const answer = await model.refine(png, AbortSignal.any([signal, AbortSignal.timeout(attemptMs)]));
+      const result = checkAnswer(answer);
+      if (result) return { result, attempts: attempt };
+      last = new RefineError('invalidOutput', 'The model answered with something that isn’t valid line art');
+    } catch (err) {
+      if (!(err instanceof RefineError) || (err.kind !== 'timeout' && err.kind !== 'unavailable')) throw err;
+      last = err;
+    }
   }
-  throw new RefineError('invalidOutput', 'The model twice answered with something that isn’t valid line art');
+  throw last ?? new RefineError('timeout', 'Refine took too long');
 }

@@ -62,6 +62,17 @@ describe('api', () => {
     if (status === 429) expect(res.headers.get('retry-after')).toBe('30');
   });
 
+  it('tries once more after a timeout or an overloaded model, but not after a rate limit', async () => {
+    const overloaded = model(new RefineError('unavailable', 'high demand'), GOOD);
+    const res = await refine(app({ model: overloaded }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ attempts: 2 });
+
+    const limited = model(new RefineError('rateLimited', 'slow down'), GOOD);
+    expect((await refine(app({ model: limited }))).status).toBe(429);
+    expect(limited.calls).toBe(1);
+  });
+
   it('gives up on a model that takes too long', async () => {
     const stuck: RefineModel = {
       name: 'stuck',
