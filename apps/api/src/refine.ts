@@ -37,12 +37,16 @@ export const REFINE_JSON_SCHEMA = {
 
 export const REFINE_PROMPT = [
   `The image is a rough sketch drawn in the air with a finger, shown as dark lines on white.`,
-  `Redraw it as clean, simple, stylized line art of the same subject: the same composition,`,
-  `position, and proportions, so your lines land where the sketch's lines are.`,
+  `Redraw it as clean, confident line art of the same subject, as an illustrator would: keep`,
+  `the composition, position, and size, so your lines land where the sketch's lines are, but`,
+  `replace wobbly or uneven lines with the shapes they were meant to be: circles round,`,
+  `straight lines straight, repeated parts (rays, petals, windows) evenly spaced and equal,`,
+  `symmetric where the subject is symmetric.`,
   `Answer with SVG path data in a ${String(REFINE_VIEWBOX)}x${String(REFINE_VIEWBOX)} viewBox`,
   `matching the image, at most ${String(REFINE_MAX_PATHS)} paths. Each path is one continuous line,`,
   `as a pen would draw it: no fills, no text, no rectangles or circles as elements (use path`,
-  `commands). Prefer smooth curves and few paths. Also give a short lower-case title.`,
+  `commands, arcs for round shapes). Prefer smooth curves and few paths.`,
+  `Also give a short lower-case title naming the subject, like "a sun", not the drawing's quality.`,
 ].join(' ');
 
 /** Why a refine failed, as the studio explains it. */
