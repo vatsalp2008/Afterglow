@@ -4,7 +4,8 @@
 
 import { REFINE_JSON_SCHEMA, REFINE_PROMPT, RefineError, type RefineModel } from './refine.ts';
 
-export const DEFAULT_GEMINI_MODEL = 'gemini-3.8-flash';
+/** Fast and steady: the flagship models were overloaded or took over 25 s when Refine was measured (ADR 0016). */
+export const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash-lite';
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 export interface GeminiOptions {

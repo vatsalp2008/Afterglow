@@ -2,10 +2,13 @@
 // (ADR 0016): checks the request format against the live API and measures latency.
 //
 //   pnpm --filter @afterglow/api smoke:refine                one refine of a sketched house
-//   pnpm --filter @afterglow/api smoke:refine -- --runs 10   latency over ten
+//   pnpm --filter @afterglow/api smoke:refine -- --runs 10   latency over ten, spaced to fit the API's
+//                                                           rate limit (6 a minute), so about two minutes
+//   pnpm --filter @afterglow/api smoke:refine -- --svg out.svg   also draw the sketch and the answer
 //
 // Needs GEMINI_API_KEY in apps/api/.env. Each run is one request on your Gemini quota.
 
+import { writeFileSync } from 'node:fs';
 import { deflateSync, crc32 } from 'node:zlib';
 import { appFromEnv } from '../src/app.ts';
 
@@ -79,6 +82,24 @@ function sketchPng(): Uint8Array {
 
 const runsArg = process.argv.indexOf('--runs');
 const runs = runsArg >= 0 ? Number(process.argv[runsArg + 1]) : 1;
+const svgArg = process.argv.indexOf('--svg');
+const svgOut = svgArg >= 0 ? process.argv[svgArg + 1] : undefined;
+
+/** The sketch (grey) under the answer (orange), in the model's 1000x1000 viewBox. */
+function comparison(paths: Array<{ d: string }>): string {
+  const k = 1000 / SIZE;
+  const sketch = SKETCH.map(
+    (s) => `<polyline points="${s.map(([x, y]) => `${String(x * k)},${String(y * k)}`).join(' ')}"/>`,
+  ).join('');
+  const art = paths.map((p) => `<path d="${p.d.replace(/"/g, '')}"/>`).join('');
+  return [
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="500" height="500">',
+    '<rect width="1000" height="1000" fill="#fff"/>',
+    `<g fill="none" stroke="#bbb" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">${sketch}</g>`,
+    `<g fill="none" stroke="#e8890c" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">${art}</g>`,
+    '</svg>',
+  ].join('\n');
+}
 if (!process.env['GEMINI_API_KEY']) {
   console.error('No GEMINI_API_KEY: put it in apps/api/.env (see .env.example).');
   process.exit(1);
@@ -88,6 +109,8 @@ const app = appFromEnv(process.env);
 const png = sketchPng();
 const times: number[] = [];
 for (let i = 1; i <= runs; i++) {
+  // The API allows 6 refines a minute per client: past that, pace them.
+  if (i > 1 && runs > 6) await new Promise((r) => setTimeout(r, 10_500));
   const t0 = performance.now();
   const res = await app.request(
     '/refine',
@@ -97,7 +120,7 @@ for (let i = 1; i <= runs; i++) {
   const ms = performance.now() - t0;
   const body = (await res.json()) as {
     title?: string;
-    paths?: unknown[];
+    paths?: Array<{ d: string }>;
     attempts?: number;
     error?: string;
     message?: string;
@@ -107,6 +130,7 @@ for (let i = 1; i <= runs; i++) {
     process.exit(1);
   }
   times.push(ms);
+  if (svgOut && i === runs) writeFileSync(svgOut, comparison(body.paths ?? []));
   console.log(
     `run ${String(i)}: ${ms.toFixed(0)} ms, "${body.title ?? ''}", ${String(body.paths?.length ?? 0)} paths, ${String(body.attempts)} attempt(s)`,
   );
